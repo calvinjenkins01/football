@@ -386,20 +386,22 @@ const FORMATIONS = {
     RB:{x:OL.RT+160,y:OFL,online:false},          // wide right as the 5th, clear of Y and Z
     QB:{...QBg}
   };}},
-  // Wing Right: TE attached right (Y on line), wing back outside Y (off line)
+  // Wing Right: TE attached right (Y on line), wing back outside Y (off line).
+  // Z plays FLANKER (off the line) so the TE stays an eligible end — exactly 7 on the line.
   wing_right:{name:'Wing Right', under:true, pos(){return{
     X:{x:FL+96,y:ONL,online:true},
     Y:{x:OL.RT+36,y:ONL,online:true},
     H:{x:OL.RT+76,y:OFL+12,online:false},
-    Z:{x:FR-96,y:ONL,online:true},
+    Z:{x:FR-96,y:OFL,online:false},
     QB:{...QBu}, RB:{x:MID,y:LOS+84}
   };}},
-  // Wing Left: TE attached left, wing back outside
+  // Wing Left: TE attached left, wing back outside.
+  // X plays FLANKER (off the line) so the TE stays an eligible end — exactly 7 on the line.
   wing_left:{name:'Wing Left', under:true, pos(){return{
     Z:{x:FR-96,y:ONL,online:true},
     Y:{x:OL.LT-36,y:ONL,online:true},
     H:{x:OL.LT-76,y:OFL+12,online:false},
-    X:{x:FL+96,y:ONL,online:true},
+    X:{x:FL+96,y:OFL,online:false},
     QB:{...QBu}, RB:{x:MID,y:LOS+84}
   };}},
   // Heavy: 2 TEs + 2 backs (12 personnel I)
@@ -1373,8 +1375,9 @@ function renderPlay(play, opts){
         return P(`M ${p.x} ${p.y} Q ${p.x+30*dir} ${p.y-15} ${p.x+60*dir} ${p.y-30}`, 'var(--ball)');
       }
       case 'dropback': {
+        // Quick game (3-step) stays shallow; 5- and 7-step drops draw clearly deeper
         const steps = a.steps || 5;
-        const depth = steps === 7 ? 36 : steps === 5 ? 24 : 14;
+        const depth = steps === 7 ? 42 : steps === 5 ? 30 : 15;
         if(a.type === 'rollout-R'){
           return P(`M ${p.x} ${p.y} Q ${p.x+30} ${p.y+10} ${p.x+60} ${p.y+depth/2}`, 'var(--block)', '3 4', 'ahb');
         }
@@ -2573,17 +2576,30 @@ function renderViewer(){
     if(rest.length) groups.push({ key:'other', label:'Other', plays:rest });
     return groups;
   };
-  const gamePicker = (title, groups, stateKey, dataAttr) => {
+  const QUICK_TAGS = ['QUICK','SCREEN'];
+  const gamePicker = (title, groups, stateKey, dataAttr, splitPace) => {
     if(!groups.length) return '';
     const flat = groups.flatMap(g => g.plays);
     if(q) return `<div class="lbl">${title}</div><div class="row">${flat.map(p => playBtn(p)).join('')}</div>`;
     const active = groups.find(g => g.key === viewerState[stateKey]) || groups[0];
+    const label = p => active.key === 'base' ? p.name : shortName(p);
+    let playRows;
+    if(splitPace){
+      // Quick game (3-step, ball out now) vs Dropback (5-step and shots)
+      const quick = active.plays.filter(p => QUICK_TAGS.includes((p.tag||'').toUpperCase()));
+      const drop  = active.plays.filter(p => !QUICK_TAGS.includes((p.tag||'').toUpperCase()));
+      playRows =
+        (quick.length ? `<div class="row" style="align-items:center;"><span class="ctl-lbl" style="min-width:80px;">Quick game</span>${quick.map(p => playBtn(p, label(p))).join('')}</div>` : '') +
+        (drop.length  ? `<div class="row" style="align-items:center;"><span class="ctl-lbl" style="min-width:80px;">Dropback</span>${drop.map(p => playBtn(p, label(p))).join('')}</div>` : '');
+    } else {
+      playRows = `<div class="row">${active.plays.map(p => playBtn(p, label(p))).join('')}</div>`;
+    }
     return `<div class="lbl">${title}</div>
        <div class="row">${groups.map(g => `<button class="chip ${g===active?'active':''}" data-${dataAttr}="${g.key}">${escapeHtml(g.label)}</button>`).join('')}</div>
-       <div class="row">${active.plays.map(p => playBtn(p, active.key==='base' ? p.name : shortName(p))).join('')}</div>`;
+       ${playRows}`;
   };
-  const runPicker = gamePicker('Run game', buildGroups(playsByType.run, 'r_'), 'runGroup', 'rgroup');
-  const passPicker = gamePicker('Pass game', buildGroups(playsByType.pass, 'c_'), 'passGroup', 'pgroup');
+  const runPicker = gamePicker('Run game', buildGroups(playsByType.run, 'r_'), 'runGroup', 'rgroup', false);
+  const passPicker = gamePicker('Pass game', buildGroups(playsByType.pass, 'c_'), 'passGroup', 'pgroup', true);
 
   const variantTabs = (play.variants && play.variants.length) ?
     `<div class="lbl">Version</div><div class="row">`
@@ -2604,9 +2620,13 @@ function renderViewer(){
   const formationOverridden = !!(viewerState.formation && viewerState.formation !== play.formation);
   const formation = getFormation(formationKey);
   const skill = formation.pos();
-  const onLineSkill = ['X','Z','H','Y'].filter(k => skill[k] && skill[k].online);
+  const onLineSkill = ['X','Z','H','Y','RB'].filter(k => skill[k] && skill[k].online);
   const onLineTotal = 5 + onLineSkill.length;
-  const legalOk = onLineTotal >= 7;
+  // Exactly 7 on the line: fewer = illegal formation flag; more covers an end (ineligible)
+  const legalOk = onLineTotal === 7;
+  const legalMsg = onLineTotal < 7 ? '⚠ ILLEGAL — need 7 on the line'
+    : onLineTotal === 7 ? '✓ legal (7 on the line)'
+    : '⚠ ' + onLineTotal + ' on the line — an end is COVERED (ineligible)';
   const eligible = ['X','Z','H','Y','RB'].filter(k => skill[k]).join(', ');
 
   const variant = (play.variants && play.variants.length && play.variants[viewerState.variantIdx]) ? play.variants[viewerState.variantIdx] : null;
@@ -2673,8 +2693,8 @@ function renderViewer(){
       <div class="ph">
         <div class="pn">${escapeHtml(formation.name)} · ${escapeHtml(play.name)}${variant ? ' · ' + escapeHtml(variant.label) : ''}${tag}</div>
         <div class="pdesc">${escapeHtml(play.desc||'')}</div>
-        <div style="font-family:'Roboto Mono';font-size:11px;margin-top:8px;color:${legalOk?'var(--motion)':'var(--accent)'};">
-          On the line: ${onLineTotal} ${legalOk?'✓ legal':'⚠ need 7'} &nbsp;·&nbsp; Eligible: ${eligible}
+        <div style="font-family:'Roboto Mono';font-size:11px;margin-top:8px;color:${legalOk?'var(--motion)':'var(--d)'};">
+          ${legalMsg} &nbsp;·&nbsp; Eligible: ${eligible}
         </div>
       </div>
       <div id="viewer-svg-wrap">${renderPlay(play, {defense:defenseKey, variantIdx:viewerState.variantIdx, formation:viewerState.formation})}</div>
@@ -4175,7 +4195,10 @@ function renderFormationBuilder(){
   // Render a temporary field with the formation as a modal
   const onLineSkill = Object.keys(skill).filter(k => skill[k].online).length;
   const onLineTotal = 5 + onLineSkill;
-  const ok = onLineTotal >= 7;
+  const ok = onLineTotal === 7;
+  const fbLegalMsg = onLineTotal < 7 ? '⚠ ILLEGAL — need 7 on the line'
+    : onLineTotal === 7 ? '✓ legal (7 on the line)'
+    : '⚠ ' + onLineTotal + ' on the line — outside man covers your end';
 
   // Build SVG with player draggables
   let inner = drawOL();
@@ -4206,8 +4229,8 @@ function renderFormationBuilder(){
         <input type="text" id="fb-id" value="${escapeHtml(f.id)}" placeholder="id" style="width:140px;" ${fbState.editing?'disabled':''}>
         <label style="font-size:12px;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="fb-under" ${f.under?'checked':''}>Under center</label>
       </div>
-      <div style="font-family:'Roboto Mono';font-size:11px;color:${ok?'var(--motion)':'var(--accent)'};margin-bottom:6px;">
-        On the line: ${onLineTotal} ${ok?'✓ legal':'⚠ need 7'}
+      <div style="font-family:'Roboto Mono';font-size:11px;color:${ok?'var(--motion)':'var(--d)'};margin-bottom:6px;">
+        ${fbLegalMsg}
       </div>
       <div style="position:relative;" id="fb-fieldwrap">${svg}</div>
       <div style="margin-top:10px;">
