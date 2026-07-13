@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Playbook vs 3-4 · 11U</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+  :root{--chalk:#f4f4ee;--board:#1f3a2e;--board-dark:#16291f;--d:#c0392b;--off:#1a1a1a;
+    --ball:#e8b03d;--pull:#e8b03d;--block:#cfe0d6;--motion:#5fc77f;--read:#e8b03d;--reverse:#c0392b;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Oswald',sans-serif;background:var(--board-dark);color:var(--chalk);line-height:1.5;padding:24px 16px 80px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  header{border-bottom:3px solid var(--ball);padding-bottom:18px;margin-bottom:6px;}
+  h1{font-weight:700;font-size:clamp(24px,5.5vw,42px);letter-spacing:1px;text-transform:uppercase;line-height:1.05;}
+  h1 span{color:var(--ball);}
+  .sub{font-family:'Roboto Mono',monospace;font-size:12px;color:#9db5a8;margin-top:6px;text-transform:uppercase;letter-spacing:1px;}
+  .legend{display:flex;flex-wrap:wrap;gap:11px 18px;margin:18px 0 18px;padding:13px;background:var(--board);border-radius:6px;font-family:'Roboto Mono',monospace;font-size:11.5px;}
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .key{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0;}
+  .key.o{border:2px solid var(--chalk);border-radius:50%;}
+  .key.d{color:var(--d);font-size:15px;font-family:'Oswald';font-weight:700;}
+  .ln{width:22px;flex-shrink:0;}
+  .ln.block{border-top:3px solid var(--block);}
+  .ln.pull{border-top:3px dashed var(--pull);}
+  .ln.path{border-top:3px solid var(--ball);}
+  .ln.motion{border-top:3px dashed var(--motion);}
+  .controls{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  .lbl{font-family:'Roboto Mono';font-size:10px;color:#5e7a6c;width:100%;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
+  .lbl.dim{color:#496254;}
+  .row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;}
+  .row.dim .tab{opacity:.62;border-style:dashed;}
+  .row.dim .tab:hover{opacity:1;}
+  .row.dim .tab.active{opacity:1;border-style:solid;}
+  .tab{font-family:'Oswald';font-weight:600;background:var(--board);color:var(--chalk);border:1px solid #3a5547;padding:7px 11px;border-radius:4px;cursor:pointer;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;transition:all .15s;}
+  .tab:hover{border-color:var(--ball);}
+  .tab.active{background:var(--ball);color:var(--board-dark);border-color:var(--ball);}
+  .tab.var{font-size:12px;}
+  .tab.var.active{background:var(--d);color:#fff;border-color:var(--d);}
+  .card{background:var(--board);border-radius:8px;overflow:hidden;border:1px solid #2c4639;}
+  .ph{padding:15px 20px 11px;border-bottom:1px solid #2c4639;}
+  .pn{font-size:21px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+  .pn .tag{display:inline-block;font-family:'Roboto Mono';font-size:10px;color:var(--board-dark);background:var(--ball);padding:2px 7px;border-radius:3px;margin-left:9px;vertical-align:middle;letter-spacing:1px;}
+  .pn .tag.hard{background:var(--d);color:#fff;}
+  .pdesc{color:#9db5a8;font-size:14px;margin-top:6px;max-width:78ch;}
+  svg{display:block;width:100%;height:auto;background:var(--board-dark);}
+  .assign{padding:4px 20px 18px;}
+  .assign h3{font-size:11.5px;text-transform:uppercase;letter-spacing:1.5px;color:var(--ball);margin:15px 0 8px;font-family:'Roboto Mono';font-weight:500;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  td{padding:6px 9px;border-bottom:1px solid #2c4639;vertical-align:top;}
+  td:first-child{font-weight:600;width:58px;color:var(--ball);font-family:'Roboto Mono';font-size:12px;}
+  .note{margin-top:12px;padding:10px 13px;background:var(--board-dark);border-left:3px solid var(--motion);border-radius:0 4px 4px 0;font-size:13px;color:#b8ccc0;}
+  .youth{margin-top:8px;padding:10px 13px;background:var(--board-dark);border-left:3px solid #e8b03d;border-radius:0 4px 4px 0;font-size:13px;color:#e6d2a8;}
+  .youth b{color:#f4e4c1;}
+  @media print{body{background:#fff;color:#000;padding:0;}.controls,.legend{display:none;}.card{border:1px solid #000;page-break-inside:avoid;}svg{background:#fff;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Run Playbook <span>vs 3-4</span> · 11U</h1>
+    <div class="sub">13 plays · consistent 3-4 front · your personnel (X Y Z H F) · motion + blocking shown</div>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="key o">G</span> O-line</div>
+    <div class="legend-item"><span class="key o">H</span> Back/skill</div>
+    <div class="legend-item"><span class="key d">E</span> 3-4 defender</div>
+    <div class="legend-item"><span class="ln block"></span> Block</div>
+    <div class="legend-item"><span style="display:inline-flex;gap:1px;"><span style="width:8px;height:0;border-top:3px solid var(--block);transform:rotate(-25deg)"></span><span style="width:8px;height:0;border-top:3px solid var(--block);transform:rotate(25deg)"></span></span> Combo / double-team</div>
+    <div class="legend-item"><span style="width:22px;height:0;border-top:3px dashed var(--block);display:inline-block;"></span> WR stalk / safety cutoff</div>
+    <div class="legend-item"><span class="ln pull"></span> Pull</div>
+    <div class="legend-item"><span class="ln path"></span> Ballcarrier</div>
+    <div class="legend-item"><span class="ln motion"></span> Motion</div>
+  </div>
+
+  <div class="lbl">Play</div>
+  <div class="controls" id="plays"></div>
+  <div class="controls" id="variants" style="margin-bottom:20px;"></div>
+
+  <div class="card" id="card"></div>
+</div>
+
+<script>
+const W=560,H=430,MID=W/2;
+let FLIP=false;
+const mx = x => FLIP ? (W - x) : x;
+function mpath(d){ if(!FLIP) return d;
+  return d.replace(/([MLQTC])([^MLQTCZ]*)/g,(m,cmd,nums)=>{
+    const vals=nums.trim().split(/[\s,]+/).filter(s=>s!=='').map(Number);
+    for(let i=0;i<vals.length;i+=2){ vals[i]=W-vals[i]; }
+    return cmd+' '+vals.join(' ')+' ';
+  });
+}
+const LOS=270, YPP=10;
+const y=yd=>LOS-yd*YPP;
+const FL=30, FR=W-30;
+const gap=46;
+const OLy=LOS+12;
+const OL={LT:MID-2*gap,LG:MID-gap,C:MID,RG:MID+gap,RT:MID+2*gap};
+
+// ---- helpers ----
+function olDot(x,txt){x=mx(x);return `<circle cx="${x}" cy="${OLy}" r="12" fill="var(--board-dark)" stroke="var(--chalk)" stroke-width="2.2"/><text x="${x}" y="${OLy+4}" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="11" fill="var(--chalk)">${txt}</text>`;}
+function skill(x,yy,txt,col){col=col||'#9db5a8';x=mx(x);return `<circle cx="${x}" cy="${yy}" r="11" fill="var(--board-dark)" stroke="${col}" stroke-width="2.2"/><text x="${x}" y="${yy+4}" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="10" fill="${col}">${txt}</text>`;}
+function def(x,yy,txt,read){x=mx(x);const c=read?'var(--read)':'var(--d)';const box=read?`<circle cx="${x}" cy="${yy-6}" r="15" fill="none" stroke="var(--read)" stroke-width="2" stroke-dasharray="3 2"/>`:'';return box+`<text x="${x}" y="${yy}" text-anchor="middle" font-family="Oswald" font-weight="700" font-size="19" fill="${c}">${txt}</text>`;}
+function ball(x,yy){x=mx(x);return `<circle cx="${x}" cy="${yy}" r="5.5" fill="var(--ball)" stroke="#7a5a14" stroke-width="1.4"/>`;}
+
+function block(x1,y1,x2,y2){
+  x1=mx(x1); x2=mx(x2);
+  const a=Math.atan2(y2-y1,x2-x1);
+  const sx=x1+Math.cos(a)*12, sy=y1+Math.sin(a)*12;
+  const ang=Math.atan2(y2-sy,x2-sx); const tl=9;
+  const tx=Math.cos(ang+Math.PI/2)*tl, ty=Math.sin(ang+Math.PI/2)*tl;
+  return `<line x1="${sx}" y1="${sy}" x2="${x2}" y2="${y2}" stroke="var(--block)" stroke-width="3.4" stroke-linecap="round"/>
+  <line x1="${x2-tx}" y1="${y2-ty}" x2="${x2+tx}" y2="${y2+ty}" stroke="var(--block)" stroke-width="3.4" stroke-linecap="round"/>`;
+}
+// combo/double-team: two linemen bracket one defender, then a climb line to a LB
+function combo(x1,x2,defx,defy,lbx,lby){
+  x1=mx(x1); x2=mx(x2); defx=mx(defx); if(lbx!=null) lbx=mx(lbx);
+  let g='';
+  g+=`<line x1="${x1}" y1="${OLy-12}" x2="${defx-4}" y2="${defy+8}" stroke="var(--block)" stroke-width="3.4" stroke-linecap="round"/>`;
+  g+=`<line x1="${x2}" y1="${OLy-12}" x2="${defx+4}" y2="${defy+8}" stroke="var(--block)" stroke-width="3.4" stroke-linecap="round"/>`;
+  g+=`<line x1="${defx-9}" y1="${defy+8}" x2="${defx+9}" y2="${defy+8}" stroke="var(--block)" stroke-width="3.4" stroke-linecap="round"/>`;
+  if(lbx!=null){const cxp=(x1+x2)/2;g+=`<path d="M ${cxp} ${OLy-12} Q ${(cxp+lbx)/2} ${(OLy+lby)/2} ${lbx} ${lby+9}" fill="none" stroke="var(--block)" stroke-width="2.6" stroke-dasharray="5 3" marker-end="url(#ahb)"/>`;}
+  return g;
+}
+function P(d,col,dash,mk){col=col||'var(--ball)';const dd=dash?`stroke-dasharray="${dash}"`:'';return `<path d="${mpath(d)}" fill="none" stroke="${col}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" ${dd} marker-end="url(#${mk||'ah'})"/>`;}
+function pull(d){return P(d,'var(--pull)',"7 4",'ahp');}
+function carry(d){return `<path d="${mpath(d)}" fill="none" stroke="var(--ball)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#ah)"/>`;}
+function motion(d){return P(d,'var(--motion)',"6 4",'ahm');}
+function reverse(d){return P(d,'var(--reverse)',null,'ahr');}
+
+// 3-4 front, consistent everywhere. strength to the right (Y side).
+function front(){return {
+  N :{x:MID,y:LOS-24,l:'N'},
+  DEl:{x:OL.LT-6,y:LOS-24,l:'E'},
+  DEr:{x:OL.RT+6,y:LOS-24,l:'E'},
+  W :{x:OL.LT-20,y:LOS-60,l:'W'},
+  J :{x:OL.LG-4,y:LOS-82,l:'J'},
+  M :{x:OL.RG+4,y:LOS-82,l:'M'},
+  S :{x:OL.RT+40,y:LOS-60,l:'S'},
+  SS:{x:FR-86,y:LOS-86,l:'SS'},
+  F :{x:MID,y:y(20),l:'F'},
+  Cl:{x:FL+2,y:LOS-86,l:'C'},
+  Cr:{x:FR-2,y:LOS-86,l:'C'},
+};}
+function drawFront(f,readKey){
+  let s='';
+  for(const k of ['N','DEl','DEr','W','J','M','S','SS','F','Cl','Cr']){
+    const d=f[k]; s+=def(d.x,d.y,d.l, readKey===k);
+  }
+  return s;
+}
+function drawOL(){return olDot(OL.LT,'T')+olDot(OL.LG,'G')+olDot(OL.C,'C')+olDot(OL.RG,'G')+olDot(OL.RT,'T');}
+
+function svgFrame(inner){
+  let grid='';
+  for(const yd of [5,10,15]){const yy=y(yd);grid+=`<line x1="${FL}" y1="${yy}" x2="${FR}" y2="${yy}" stroke="#2c4639" stroke-width="1"/><text x="${FL-4}" y="${yy+3}" text-anchor="end" font-family="Roboto Mono" font-size="8" fill="#5e7a6c">${yd}</text><text x="${FR+4}" y="${yy+3}" font-family="Roboto Mono" font-size="8" fill="#5e7a6c">${yd}</text>`;}
+  return `<svg viewBox="0 0 ${W} ${H}"><defs>
+    <marker id="ah" markerWidth="8" markerHeight="8" refX="5.5" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ball)"/></marker>
+    <marker id="ahp" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="var(--pull)"/></marker>
+    <marker id="ahm" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="var(--motion)"/></marker>
+    <marker id="ahr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="var(--reverse)"/></marker>
+    <marker id="ahb" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--block)"/></marker>
+    </defs>${grid}
+    <line x1="${FL}" y1="${LOS}" x2="${FR}" y2="${LOS}" stroke="#6e8a7c" stroke-width="2"/>
+    ${inner}</svg>`;
+}
+
+// shared skill spots
+const QBg={x:MID,y:LOS+72};   // gun QB
+const QBu={x:MID,y:LOS+34};   // under-center QB
+
+// ===== FORMATIONS ===== fixed personnel X H Y Z QB RB (Y = FB/TE in backfield when needed)
+// LEGALITY: exactly 7 on the line = 5 interior OL + 2 more (online:true). Only the 2 end-men on
+// the line are eligible there; off-line players (slots/backs) are always eligible.
+// online:true => on the LOS. The 2 end-men of the line are the eligible on-line receivers.
+const ONL=OLy;            // on-the-line y: level with the O-line dots
+const OFL=OLy+22;         // off-the-line y: clearly behind, in the slot
+const splitO=64;          // how far outside the tackle a slot sits
+const FORMS={
+  // 2x2: X,Z on line as ends (7 on line); H,Y off in slots. All eligible (ends + 2 slots + RB).
+  spread:{name:'Spread', under:false, pos(){return{
+    X:{x:FL+8,y:ONL,online:true}, Z:{x:FR-8,y:ONL,online:true},
+    H:{x:OL.LT-splitO,y:OFL,online:false}, Y:{x:OL.RT+splitO,y:OFL,online:false},
+    QB:{...QBg}, RB:{x:MID-34,y:LOS+88} };}},
+  // Ace: Y = TE on the line (right end). Z flanker OFF the line behind Y so Z stays eligible.
+  // X on line backside = left end. On line: 5 OL + X + Y = 7. Off: Z (flanker), H (slot).
+  ace:{name:'Ace', under:true, pos(){return{
+    X:{x:FL+8,y:ONL,online:true},        // backside end, on line
+    Y:{x:OL.RT+24,y:ONL,online:true},    // TE, on line = playside end
+    Z:{x:OL.RT+58,y:OFL,online:false},   // flanker OFF the line (behind/outside Y) — eligible
+    H:{x:OL.LT-splitO,y:OFL,online:false},
+    QB:{...QBu}, RB:{x:MID,y:LOS+82} };}},
+  // I-Form: X,Z ends on line (7). Y=FB & RB in backfield. Eligible: X, Z, Y, RB.
+  iform:{name:'I-Form', under:true, pos(){return{
+    X:{x:FL+8,y:ONL,online:true}, Z:{x:FR-8,y:ONL,online:true},
+    H:{x:OL.LT-splitO,y:OFL,online:false},
+    Y:{x:MID,y:LOS+58}, QB:{...QBu}, RB:{x:MID,y:LOS+92} };}},
+  // Split Back: X,Z ends on line (7). Y & RB split backs. Eligible: X, Z, Y, RB.
+  splitback:{name:'Split Back', under:true, pos(){return{
+    X:{x:FL+8,y:ONL,online:true}, Z:{x:FR-8,y:ONL,online:true},
+    H:{x:OL.LT-splitO,y:OFL,online:false},
+    Y:{x:MID-34,y:LOS+72}, QB:{...QBu}, RB:{x:MID+34,y:LOS+72} };}},
+  // Pistol 2x2: same as spread. 7 on line (X,Z), H,Y off in slots.
+  pistol:{name:'Pistol', under:false, pos(){return{
+    X:{x:FL+8,y:ONL,online:true}, Z:{x:FR-8,y:ONL,online:true},
+    H:{x:OL.LT-splitO,y:OFL,online:false}, Y:{x:OL.RT+splitO,y:OFL,online:false},
+    QB:{x:MID,y:LOS+58}, RB:{x:MID,y:LOS+94} };}},
+  // Trips: X backside end on line; Z outermost trips on line (=2 ends, 7 on line);
+  // Y & H are the inside slots OFF the line. Eligible: X, Z (ends) + Y, H (off) + RB.
+  trips:{name:'Trips', under:false, pos(){return{
+    X:{x:FL+8,y:ONL,online:true},        // backside end, on line
+    Z:{x:FR-8,y:ONL,online:true},        // outermost trips, on line = playside end
+    Y:{x:FR-56,y:OFL,online:false},      // middle slot, OFF the line
+    H:{x:FR-104,y:OFL,online:false},     // inside slot, OFF the line
+    QB:{...QBg}, RB:{x:MID-34,y:LOS+88} };}},
+  // Bunch: X backside end on line; Z point man on line (=2 ends, 7 on line);
+  // Y & H stacked OFF the line. Eligible: X, Z + Y, H + RB.
+  bunch:{name:'Bunch', under:false, pos(){return{
+    X:{x:FL+8,y:ONL,online:true},        // backside end, on line
+    Z:{x:FR-34,y:ONL,online:true},       // point man, on line
+    Y:{x:FR-74,y:OFL,online:false},      // off the line, stacked inside
+    H:{x:FR-58,y:OFL+18,online:false},   // off the line, deeper
+    QB:{...QBg}, RB:{x:MID-34,y:LOS+88} };}},
+};
+const FORM_ORDER=[['spread','Spread'],['ace','Ace'],['iform','I-Form'],['splitback','Split Back'],['pistol','Pistol'],['trips','Trips'],['bunch','Bunch']];
+const SKCOL={X:'#c0392b',Z:'#c0392b',H:'#5fc77f',Y:'#2b6cb0',RB:'#5fc77f',QB:'#9db5a8'};
+function drawSkill(P,hide){hide=hide||[];let s='';
+  for(const k of ['X','Z','H','Y','RB']){
+    if(hide.includes(k))continue; const p=P[k]; if(!p) continue;
+    // on-line receivers get a tiny stem to the LOS so on/off-line is visually clear
+    if(p.online){ s+=`<line x1="${mx(p.x)}" y1="${p.y-11}" x2="${mx(p.x)}" y2="${LOS}" stroke="#6e8a7c" stroke-width="2"/>`; }
+    s+=skill(p.x,p.y,k,SKCOL[k]);
+  }
+  s+=skill(P.QB.x,P.QB.y,'Q','#9db5a8');
+  return s;
+}
+
+function dots(list){return list.map(p=>skill(p.x,p.y,p.t,p.c)).join('');}
+
+const PLAYS={
+
+inside_trap:{name:'Inside Trap',tag:'GAP',desc:'Backside guard pulls and traps the playside end; everyone else blocks down. Quick downhill hitter — the trapped man blocks himself by crashing upfield.',
+  blocks(f){let g='';
+    g+=`<text x="${mx(f.DEr.x)}" y="${f.DEr.y-16}" text-anchor="middle" font-family="Roboto Mono" font-size="9" fill="var(--d)">trap ↓</text>`;
+    g+=block(OL.RT,OLy,f.S.x-8,f.S.y+10);
+    g+=block(OL.RG,OLy,f.N.x+3,f.N.y+8);
+    g+=P(`M ${OL.C} ${OLy-12} Q ${MID-6} ${LOS-38} ${f.M.x} ${f.M.y+10}`,'var(--block)');
+    g+=pull(`M ${OL.LG} ${OLy-5} Q ${MID-4} ${LOS+14} ${f.DEr.x-8} ${f.DEr.y+10}`);
+    g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);
+    return g;},
+  action(f,S){let g='';const bc=S.RB;
+    g+=carry(`M ${bc.x} ${bc.y} Q ${MID-4} ${LOS+24} ${MID+gap-16} ${LOS-6}`);
+    g+=handoff(S);return g;},
+  rows:[['PST/RT','Climb to S (playside OLB) — skip the trapped end.'],['PSG/RG','Down block the Nose.'],['C','Combo Nose / climb to MIKE.'],['BSG/LG','PULL & TRAP the playside end — hit his inside hip.'],['BST/LT','Down block the backside end.'],['RB','Take the handoff downhill right off the trap. Be patient, duck inside the kick.']],
+  note:'The trapped end is left free on purpose — his crash is what lets the puller kick him. Classic youth gap play.',
+  youth:'<b>11U:</b> Great first install. One puller, downhill, simple aim point. RB follows the pulling guard\'s hip.'},
+
+sweep_strong:{name:'Sweep Strong',tag:'GAP',desc:'Toss/sweep to the strong side; backside guard and Y (FB) pull/lead around the edge while playside seals inside.',
+  needY:true,
+  blocks(f){let g='';
+    g+=block(OL.RT,OLy,f.DEr.x-4,f.DEr.y+8);
+    g+=block(OL.RG,OLy,f.N.x+3,f.N.y+8);
+    g+=block(OL.C,OLy,f.N.x-3,f.N.y+8);
+    g+=pull(`M ${OL.LG} ${OLy-5} Q ${MID+gap} ${LOS+6} ${f.S.x+4} ${LOS-8}`);
+    g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);
+    return g;},
+  action(f,S){let g='';const bc=S.RB;
+    if(S.Y) g+=P(`M ${S.Y.x} ${S.Y.y} Q ${OL.RT} ${LOS+30} ${f.S.x+20} ${LOS-2}`,'var(--block)',"5 3"); // Y leads
+    g+=carry(`M ${bc.x} ${bc.y} Q ${OL.RT+30} ${LOS+50} ${FR-60} ${LOS-4}`);
+    g+=ball(bc.x-6,bc.y-4);return g;},
+  rows:[['PST/RT','Down/reach the playside end.'],['PSG/RG','Block the Nose.'],['C','Help Nose / backside A.'],['BSG/LG','PULL playside, lead around the edge on the force defender.'],['BST/LT','Hinge backside end.'],['Y (FB)','Lead block — wrap the edge, kick the first man outside.'],['RB','Take the toss, follow the pullers around the edge, get vertical.']],
+  note:'Sweep gets your best athlete on the perimeter behind a wall of pullers.',
+  youth:'<b>11U:</b> Excellent. Drill the toss exchange clean before adding speed.'},
+
+h_rocket:{name:'H Rocket Sweep',tag:'JET',desc:'H comes in fast jet motion and takes the toss on the move; QB reverse-pivots. Speed sweep — the motion does the work.',
+  ballcarrier:'H',
+  blocks(f){let g='';
+    for(const k of ['LT','LG','C','RG','RT']){const x=OL[k];g+=P(`M ${x} ${OLy-12} Q ${x+24} ${LOS-4} ${x+34} ${LOS-22}`,'var(--block)');}
+    return g;},
+  action(f,S){let g='';const h=S.H;
+    g+=motion(`M ${h.x} ${h.y} L ${MID-30} ${LOS+22}`);
+    g+=carry(`M ${MID-30} ${LOS+22} Q ${OL.RT+20} ${LOS+30} ${FR-50} ${LOS-6}`);
+    if(S.Y) g+=P(`M ${S.Y.x} ${S.Y.y} Q ${OL.RT+10} ${LOS+34} ${f.S.x+10} ${LOS-4}`,'var(--block)',"5 3");
+    g+=ball(MID-6,LOS+30);return g;},
+  rows:[['OL','Reach playside (zone) — seal everyone inside, run them to the sideline.'],['Y','Lead/seal the edge force defender.'],['H','Jet motion full speed, take the toss on the move, get vertical off the edge.'],['QB','Reverse-pivot, hand or toss to H in motion, carry out a fake.']],
+  note:'Jet/rocket sweep lives on the motion man\'s speed. The line just reach-seals.',
+  youth:'<b>11U:</b> Big-play potential, but time the motion-snap so H is full speed crossing the QB. Practice the timing a lot.'},
+
+qb_trap:{name:'QB Trap Strong',tag:'GAP',desc:'Inside trap but the QB keeps it; a back leads through the hole. Same trap blocking as Inside Trap.',
+  ballcarrier:'QB',
+  blocks(f){let g='';
+    g+=`<text x="${mx(f.DEr.x)}" y="${f.DEr.y-16}" text-anchor="middle" font-family="Roboto Mono" font-size="9" fill="var(--d)">trap ↓</text>`;
+    g+=block(OL.RT,OLy,f.S.x-8,f.S.y+10);
+    g+=P(`M ${OL.RG} ${OLy-12} Q ${MID+8} ${LOS-40} ${f.M.x} ${f.M.y+10}`,'var(--block)');
+    g+=block(OL.C,OLy,f.N.x+3,f.N.y+8);
+    g+=pull(`M ${OL.LG} ${OLy-5} Q ${MID-4} ${LOS+14} ${f.DEr.x-8} ${f.DEr.y+10}`);
+    g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);
+    return g;},
+  action(f,S){let g='';const lead=S.RB;
+    g+=motion(`M ${lead.x} ${lead.y} Q ${MID-10} ${LOS+44} ${MID+gap-20} ${LOS+18}`); // RB leads
+    g+=carry(`M ${S.QB.x} ${S.QB.y} Q ${MID+10} ${LOS+24} ${MID+gap-14} ${LOS-6}`);
+    g+=ball(S.QB.x,S.QB.y-10);return g;},
+  rows:[['PST/RT','Climb to S — skip the trapped end.'],['PSG/RG','Down/up to MIKE.'],['C','Block the Nose.'],['BSG/LG','PULL & TRAP the playside end.'],['BST/LT','Down block backside end.'],['RB','Lead through the hole, block the first wrong color.'],['QB','Keep the ball, follow the lead back downhill off the trap.']],
+  note:'QB-run version of trap. Use it when your QB is one of your better runners.',
+  youth:'<b>11U:</b> Good if your QB runs well. No handoff to mess up — he just keeps and follows the lead back.'},
+
+is_zone_read:{name:'Inside Zone Read',tag:'READ',hard:true,desc:'Inside zone with the QB reading the backside edge. Give if he crashes, keep if he sits. True read + a called 11U version.',
+  variants:{
+    read:{label:'True Read',readKey:'W',
+      blocks(f){let g='';
+        g+=block(OL.RT,OLy,f.DEr.x-4,f.DEr.y+8);
+        g+=P(`M ${OL.RG} ${OLy-12} Q ${MID+24} ${LOS-40} ${f.M.x} ${f.M.y+10}`,'var(--block)');
+        g+=block(OL.C,OLy,f.N.x+3,f.N.y+8);
+        g+=P(`M ${OL.LG} ${OLy-12} Q ${MID-24} ${LOS-40} ${f.J.x} ${f.J.y+10}`,'var(--block)');
+        return g;},
+      action(f,S){let g='';const bc=S.RB;
+        g+=carry(`M ${bc.x} ${bc.y} Q ${MID+6} ${LOS+30} ${MID+gap-18} ${LOS-6}`);
+        g+=P(`M ${S.QB.x} ${S.QB.y} Q ${OL.LT-10} ${LOS+20} ${f.DEl.x-20} ${LOS-4}`,'var(--ball)',"3 4",'ah');
+        g+=ball((bc.x+S.QB.x)/2,(bc.y+S.QB.y)/2);return g;},
+      rows:[['PST/RT','Block the playside end.'],['PSG/RG','Combo the end, climb to MIKE.'],['C','Block the Nose.'],['BSG/LG','Combo Nose, climb to JACK.'],['BST/LT','LEAVE the backside read man (W) — block down inside.'],['RB','Run inside zone, aim playside A. Take the give unless QB pulls.'],['QB','READ the backside W: crashes → pull & keep. Sits → give to RB.']],
+      note:'The unblocked highlighted defender (W) is the read. One key, give-or-keep.'},
+    called:{label:'Called (11U)',readKey:null,
+      blocks(f){let g='';
+        g+=combo(OL.RT,OL.RG,f.DEr.x,f.DEr.y,f.M.x,f.M.y);
+        g+=combo(OL.C,OL.LG,f.N.x,f.N.y,f.J.x,f.J.y);
+        g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);
+        return g;},
+      action(f,S){let g='';const bc=S.RB;
+        g+=carry(`M ${bc.x} ${bc.y} Q ${MID+6} ${LOS+30} ${MID+gap-18} ${LOS-6}`);
+        g+=handoff(S);return g;},
+      rows:[['RT + RG','COMBO the playside end (double-team), RG climbs to MIKE.'],['C + LG','COMBO the Nose (double-team), LG climbs to JACK.'],['BST/LT','BLOCK the backside end (no read in this version).'],['RB','Take the handoff, aim playside A-gap. One cut, downhill.'],['QB','Hand it off every time. No read — carry out a fake.']],
+      note:'11U version: just hand it off. The two COMBO blocks (double-teams) are the whole play — two linemen drive one defender, then one climbs to a linebacker.'},
+  },
+  youth:'<b>11U:</b> Run the CALLED version. The give/keep read is a lot for this age — install it as a straight inside-zone handoff first.'},
+
+inside_zone:{name:'Inside Zone',tag:'ZONE',desc:'Downhill zone between the tackles. Two combo double-teams drive the front and climb to the linebackers. RB aims the playside A-gap and makes one cut.',
+  blocks(f){let g='';
+    g+=combo(OL.RT,OL.RG,f.DEr.x,f.DEr.y,f.M.x,f.M.y);   // RT+RG combo end -> MIKE
+    g+=combo(OL.C,OL.LG,f.N.x,f.N.y,f.J.x,f.J.y);        // C+LG combo nose -> JACK
+    g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);             // LT backside end
+    return g;},
+  action(f,S){let g='';const bc=S.RB;
+    g+=carry(`M ${bc.x} ${bc.y} Q ${MID+6} ${LOS+30} ${MID+gap-18} ${LOS-6}`);
+    g+=handoff(S);return g;},
+  rows:[['RT + RG','COMBO the playside end (double-team), RG climbs to MIKE.'],['C + LG','COMBO the Nose (double-team), LG climbs to JACK.'],['BST/LT','Block the backside end.'],['RB','Take the handoff, aim playside A-gap. One cut, get downhill.'],['QB','Hand it off, carry out a fake.']],
+  note:'The covered/uncovered rule: defender over you, block him; nobody over you, help double-team then climb to a linebacker. Vertical/downhill steps — this is the foundation run.',
+  youth:'<b>11U:</b> Your #1 install. The two COMBO double-teams ARE the play — drill them until they\'re automatic.'},
+
+outside_zone:{name:'Outside Zone',tag:'ZONE',desc:'Wide/stretch zone. Every lineman takes a flat reach step playside, sealing defenders inside. RB presses the edge and bounces or cuts up.',
+  blocks(f){let g='';
+    for(const k of ['LT','LG','C','RG','RT']){const x=OL[k];g+=P(`M ${x} ${OLy-12} Q ${x+26} ${LOS-4} ${x+38} ${LOS-24}`,'var(--block)');}
+    return g;},
+  action(f,S){let g='';const bc=S.RB;
+    g+=carry(`M ${bc.x} ${bc.y} Q ${MID+80} ${LOS+40} ${FR-40} ${LOS-10}`);
+    g+=handoff(S);return g;},
+  rows:[['PST/RT','Reach the playside end — run him to the sideline or hook him.'],['PSG/RG','Reach playside, overtake the end / climb to MIKE.'],['C','Reach the Nose playside.'],['BSG/LG','Scoop the Nose, climb to JACK.'],['BST/LT','Scoop the backside end — cut him off.'],['RB','Press outside the RT. Reached = bounce, hooked = cut up.']],
+  note:'Same covered/uncovered zone rule as inside zone — only the footwork (flat reach, never step backside) and the RB aim point (the edge) change.',
+  youth:'<b>11U:</b> Pairs with inside zone off the same rules. Teach the flat reach step and "one cut, get downhill."'},
+
+toss_crack:{name:'Toss Crack',tag:'PERIMETER',desc:'Toss to the strong side; the slot/wing cracks down on the force defender while the outside receiver blocks the corner. Outside speed play.',
+  blocks(f){let g='';
+    g+=block(OL.RT,OLy,f.DEr.x-4,f.DEr.y+8);
+    g+=block(OL.RG,OLy,f.N.x+3,f.N.y+8);
+    g+=block(OL.C,OLy,f.N.x-3,f.N.y+8);
+    g+=pull(`M ${OL.LG} ${OLy-5} Q ${MID+gap} ${LOS+6} ${f.S.x+6} ${LOS-8}`);
+    g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);
+    return g;},
+  action(f,S){let g='';const bc=S.RB;
+    if(S.Y) g+=P(`M ${S.Y.x} ${S.Y.y} Q ${f.S.x+20} ${LOS-20} ${f.S.x+6} ${LOS-6}`,'var(--block)',"5 3"); // crack on S
+    if(S.Z) g+=P(`M ${S.Z.x} ${S.Z.y} Q ${FR-10} ${LOS-30} ${f.Cr.x} ${f.Cr.y+10}`,'var(--block)',"5 3"); // Z on corner
+    g+=carry(`M ${bc.x} ${bc.y} Q ${OL.RT+40} ${LOS+50} ${FR-30} ${LOS-2}`);
+    g+=ball(bc.x-6,bc.y-4);return g;},
+  rows:[['PST/RT','Reach the playside end.'],['Interior','Block down / Nose.'],['BSG/LG','Pull and lead around the edge.'],['Y (slot/wing)','CRACK down on the force defender (S) from outside-in.'],['Z','Block the corner — outside wall.'],['RB','Take the toss, follow the crack and pull, turn it up.']],
+  note:'The crack block by the slot springs the edge — he blocks the force man down so the runner gets outside.',
+  youth:'<b>11U:</b> Good speed play. Make sure the crack block is above the waist, from the front.'},
+
+z_around:{name:'Z Around',tag:'JET/MISDIR',hard:true,desc:'Fake jet to H one way, then Z comes around the other way for the ball. Misdirection reverse — high risk/reward.',
+  ballcarrier:'Z',
+  blocks(f){let g='';
+    for(const k of ['LT','LG','C','RG','RT']){const x=OL[k];g+=P(`M ${x} ${OLy-12} Q ${x-22} ${LOS-4} ${x-32} ${LOS-22}`,'var(--block)');}
+    return g;},
+  action(f,S){let g='';
+    g+=motion(`M ${S.H.x} ${S.H.y} Q ${MID-90} ${LOS+40} ${FL+70} ${LOS+30}`); // H fake jet
+    g+=reverse(`M ${S.Z.x} ${S.Z.y} Q ${FR-60} ${LOS+30} ${MID+10} ${LOS+50}`); // Z around
+    g+=carry(`M ${MID+10} ${LOS+50} Q ${OL.RT} ${LOS+30} ${FR-50} ${LOS-4}`);
+    g+=ball(MID+10,LOS+52);return g;},
+  rows:[['OL','Reach/seal away from the play to sell the jet direction.'],['H','Fake jet sweep one way — sell it, no ball.'],['Z','Come around behind for the real handoff, attack the opposite edge.'],['QB','Fake to H, give to Z coming around.']],
+  note:'Misdirection off your jet look — the fake holds the defense while Z attacks the other side.',
+  youth:'<b>11U:</b> Hardest ball-handling in your set (two motions, fake + real exchange). Save it as a once-a-game trick.'},
+
+reverse_option:{name:'Reverse Option',tag:'OPTION',hard:true,desc:'Jet fake, QB keeps and runs the reverse-side edge, optioning to Y as the pitch man. A reverse AND an option.',
+  variants:{
+    read:{label:'True Option',readKey:'S',
+      blocks(f){let g='';
+        for(const k of ['LT','LG','C','RG','RT']){const x=OL[k];g+=P(`M ${x} ${OLy-12} Q ${x+22} ${LOS-4} ${x+32} ${LOS-22}`,'var(--block)');}
+        return g;},
+      action(f,S){let g='';
+        g+=motion(`M ${S.H.x} ${S.H.y} Q ${MID-60} ${LOS+66} ${FL+60} ${LOS+30}`); // H jet fake
+        g+=carry(`M ${S.QB.x} ${S.QB.y} Q ${OL.RT+10} ${LOS+30} ${f.S.x-6} ${LOS+2}`); // QB edge
+        const pitch=S.Y||S.RB;
+        g+=P(`M ${pitch.x} ${pitch.y} Q ${OL.RT+40} ${LOS+50} ${FR-40} ${LOS+16}`,'var(--ball)',"3 4",'ah'); // pitch
+        g+=ball(S.QB.x-6,S.QB.y-8);return g;},
+      rows:[['OL','Reach/seal playside (option side).'],['H','Fake jet the other way — sell it.'],['Y','Pitch relationship outside the QB.'],['QB','READ the force defender (S): takes you → pitch to Y. Sits → keep upfield.']],
+      note:'A reverse fake into a true edge option. Two decisions for the QB.'},
+    called:{label:'Called (11U)',readKey:null,
+      blocks(f){let g='';
+        for(const k of ['LT','LG','C','RG','RT']){const x=OL[k];g+=P(`M ${x} ${OLy-12} Q ${x+22} ${LOS-4} ${x+32} ${LOS-22}`,'var(--block)');}
+        return g;},
+      action(f,S){let g='';
+        g+=motion(`M ${S.H.x} ${S.H.y} Q ${MID-60} ${LOS+66} ${FL+60} ${LOS+30}`);
+        g+=carry(`M ${S.QB.x} ${S.QB.y} Q ${OL.RT+20} ${LOS+34} ${FR-40} ${LOS+6}`);
+        g+=ball(S.QB.x-6,S.QB.y-8);return g;},
+      rows:[['OL','Reach/seal playside.'],['H','Fake jet the other way.'],['QB','Keep and run the edge. No pitch, no read — just a QB keeper off the jet fake.']],
+      note:'11U version: drop the option. QB fakes the jet and keeps around the edge. One ballcarrier.'},
+  },
+  youth:'<b>11U:</b> Run the CALLED keep-only version. A reverse fake + a live pitch is the toughest ball-handling for this age.'},
+
+toss_bob:{name:'Toss Bob',tag:'JET',desc:'Toss with a back-on-backer (Bob) lead. The backside tackle pulls and leads up on the backside linebacker.',
+  needY:true,
+  blocks(f){let g='';
+    g+=block(OL.LT,OLy,f.DEl.x+4,f.DEl.y+8);
+    g+=block(OL.LG,OLy,f.M.x,f.M.y+10);
+    g+=block(OL.C,OLy,f.N.x-3,f.N.y+8);
+    g+=block(OL.RG,OLy,f.DEr.x-6,f.DEr.y+8);
+    g+=pull(`M ${OL.RT} ${OLy-5} Q ${MID+20} ${LOS-30} ${f.M.x} ${f.M.y+10}`);
+    return g;},
+  action(f,S){let g='';const bc=S.RB;
+    if(S.Y) g+=P(`M ${S.Y.x} ${S.Y.y} Q ${MID+20} ${LOS+44} ${OL.RT+10} ${LOS+20}`,'var(--block)',"5 3");
+    g+=carry(`M ${bc.x} ${bc.y} Q ${OL.RG} ${LOS+50} ${FR-90} ${LOS-2}`);
+    g+=ball(bc.x-6,bc.y-4);return g;},
+  rows:[['Playside OL','Block down / on your man.'],['BST/RT','Pull and lead (Bob) up on the backside linebacker.'],['Y (FB)','Lead block through the hole.'],['RB','Take the toss, follow Y and the puller.'],['QB','Toss to RB, carry out the fake.']],
+  note:'"Bob" = back-on-backer; a lead-blocking toss. Simple and physical.',
+  youth:'<b>11U:</b> Run it as a straight call. Simple and downhill.'},
+
+fb_belly:{name:'FB Belly Weak',tag:'INSIDE',desc:'Inside give to the weak side with belly action; Y (FB) and Z misdirect the other way. Clean downhill run.',
+  needY:true, ballcarrier:'Y',
+  blocks(f){let g='';
+    g+=block(OL.LT,OLy,f.DEl.x-2,f.DEl.y+8);
+    g+=block(OL.LG,OLy,f.N.x-3,f.N.y+8);
+    g+=P(`M ${OL.C} ${OLy-12} Q ${MID-6} ${LOS-40} ${f.J.x} ${f.J.y+10}`,'var(--block)');
+    g+=block(OL.RG,OLy,f.N.x+3,f.N.y+8);
+    g+=block(OL.RT,OLy,f.DEr.x+4,f.DEr.y+8);
+    return g;},
+  action(f,S){let g='';const bc=S.Y||S.RB;
+    if(S.Z) g+=motion(`M ${S.Z.x} ${S.Z.y} Q ${MID-40} ${LOS+66} ${FL+70} ${LOS+30}`); // Z misdirection
+    g+=carry(`M ${bc.x} ${bc.y} Q ${MID-20} ${LOS+40} ${OL.LG-14} ${LOS-6}`);
+    g+=ball((bc.x+S.QB.x)/2,(bc.y+S.QB.y)/2);return g;},
+  rows:[['BST/LT','Block the backside (weak) end.'],['LG','Block the Nose.'],['C','Combo / climb to JACK.'],['RG/RT','Block down — seal strong side.'],['Z','Misdirection motion the other way.'],['Y (FB)','Take the give, hit it weak side downhill.'],['QB','Give to Y, fake the other way.']],
+  note:'Belly is a downhill inside give with misdirection window dressing to hold the backside.',
+  youth:'<b>11U:</b> Simple and clean. Great early-down call. The misdirection (Z) just freezes the backside. <b>Note:</b> Belly hits the WEAK side by design — so on "Run Right" (strength right) the ball goes left, opposite the other plays. That\'s intentional, not a glitch.'},
+
+jet_sweep:{name:'Jet Sweep',tag:'MOTION',motion:true,desc:'The motion man flies across at full speed and takes the handoff on the move, hitting the edge. The pre-snap speed stresses the defense — pure perimeter run.',
+  blocks(f){let g='';
+    for(const k of ['LT','LG','C','RG','RT']){const x=OL[k];g+=P(`M ${x} ${OLy-12} Q ${x+24} ${LOS-4} ${x+34} ${LOS-22}`,'var(--block)');}
+    return g;},
+  action(f,S,mm){let g='';const m=S[mm]||S.H;
+    // motion across behind the line, receive near the right edge, bend upfield
+    g+=motion(`M ${m.x} ${m.y} Q ${MID-40} ${LOS+30} ${MID+10} ${LOS+26}`);
+    g+=carry(`M ${MID+10} ${LOS+26} Q ${OL.RT+24} ${LOS+24} ${FR-50} ${LOS-8}`);
+    // a lead/seal from Y if available off the line
+    if(S.Y && S.Y.online===false) g+=P(`M ${S.Y.x} ${S.Y.y} Q ${OL.RT+10} ${LOS+30} ${f.S.x+8} ${LOS-4}`,'var(--block)',"5 3");
+    g+=ball(MID+2,LOS+30);return g;},
+  rows:[['OL','Reach playside (zone) — seal everyone inside, run them to the sideline.'],['Y / slot','Lead or seal the edge force defender.'],['Motion man','Full-speed jet motion, take the handoff on the move, get vertical off the edge.'],['QB','Catch the snap, hand to the jet man crossing, carry out a fake.']],
+  note:'Jet sweep lives on the motion man\'s speed. The line just reach-seals and the back beats everyone to the corner.',
+  youth:'<b>11U:</b> Huge weapon. The whole play is timing — snap the ball as the motion man crosses the QB at full speed. Rep the timing daily.'},
+
+jet_zone:{name:'Jet + Inside Zone',tag:'MOTION',motion:true,desc:'Fake the jet sweep to the motion man, hand inside zone to the RB the other way. The jet motion pulls a defender to the edge, opening the inside run. Two plays off one look.',
+  blocks(f){let g='';
+    g+=combo(OL.RT,OL.RG,f.DEr.x,f.DEr.y,f.M.x,f.M.y);
+    g+=combo(OL.C,OL.LG,f.N.x,f.N.y,f.J.x,f.J.y);
+    g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);
+    return g;},
+  action(f,S,mm){let g='';const m=S[mm]||S.H;const bc=S.RB;
+    // jet FAKE across (dashed motion, no ball)
+    g+=motion(`M ${m.x} ${m.y} Q ${MID-30} ${LOS+34} ${FR-90} ${LOS+24}`);
+    // RB takes the real inside zone give
+    g+=carry(`M ${bc.x} ${bc.y} Q ${MID+6} ${LOS+30} ${MID+gap-18} ${LOS-6}`);
+    g+=handoff(S);return g;},
+  rows:[['RT + RG','COMBO the playside end (double-team), RG climbs to MIKE.'],['C + LG','COMBO the Nose (double-team), LG climbs to JACK.'],['BST/LT','Block the backside end.'],['Motion man','FAKE the jet sweep — sell it at full speed, no ball.'],['RB','Take the inside-zone give, aim playside A-gap, one cut.'],['QB','Fake the jet, hand inside to the RB.']],
+  note:'The jet fake pulls the edge defender (and often a linebacker) toward the sideline — that\'s what opens the inside zone. Same blocking as your base Inside Zone.',
+  youth:'<b>11U:</b> Gold. Once they respect your jet sweep, this inside give is wide open. Built on Inside Zone you already know.'},
+
+orbit_toss:{name:'Orbit Toss',tag:'MOTION',motion:true,desc:'The motion man loops (orbits) behind the QB, then the QB tosses to the RB going the other way with the orbit man leading or as a second threat. Backfield motion that stresses the edge.',
+  needY:true,
+  blocks(f){let g='';
+    g+=block(OL.RT,OLy,f.DEr.x-4,f.DEr.y+8);
+    g+=block(OL.RG,OLy,f.N.x+3,f.N.y+8);
+    g+=block(OL.C,OLy,f.N.x-3,f.N.y+8);
+    g+=pull(`M ${OL.LG} ${OLy-5} Q ${MID+gap} ${LOS+6} ${f.S.x+4} ${LOS-8}`);
+    g+=block(OL.LT,OLy,f.DEl.x+6,f.DEl.y+8);
+    return g;},
+  action(f,S,mm){let g='';const m=S[mm]||S.H;const bc=S.RB;
+    // orbit motion: loop behind the QB
+    g+=motion(`M ${m.x} ${m.y} Q ${MID-30} ${LOS+96} ${S.QB.x+30} ${LOS+86}`);
+    // RB takes the toss to the right edge
+    g+=carry(`M ${bc.x} ${bc.y} Q ${OL.RT+30} ${LOS+50} ${FR-60} ${LOS-4}`);
+    if(S.Y) g+=P(`M ${S.Y.x} ${S.Y.y} Q ${OL.RT} ${LOS+30} ${f.S.x+18} ${LOS-2}`,'var(--block)',"5 3");
+    g+=ball(bc.x-6,bc.y-4);return g;},
+  rows:[['PST/RT','Reach the playside end.'],['Interior','Block the Nose / down.'],['BSG/LG','Pull and lead around the edge.'],['Y (FB)','Lead block — wrap the edge.'],['Motion man','Orbit behind the QB — second threat / lead, holds the backside.'],['RB','Take the toss, follow the pullers around the edge.'],['QB','Toss to the RB, the orbit man loops as a decoy/lead.']],
+  note:'The orbit motion behind the QB freezes backside defenders and gives a second edge threat off the toss.',
+  youth:'<b>11U:</b> Good change-up. The orbit loop is slower than jet, so timing is more forgiving — easier exchange than the jet sweep.'},
+
+};
+
+// handoff dot at the mesh between QB and RB
+function handoff(S){const bc=S.RB||S.Y;if(!bc)return '';return ball((bc.x+S.QB.x)/2,(bc.y+S.QB.y)/2);}
+
+// Receiver blocking on run plays (stalk-based for 11U).
+// Each receiver stalks the DB nearest him (short local block). The backside slot/receiver
+// climbs to the deep free safety (F) to cut off pursuit — the "home run" block.
+function recBlocks(f,S,opts){opts=opts||{};let g='';
+  // Z = playside outside end -> stalk playside corner (short, local)
+  if(S.Z){ g+=stalkLocal(S.Z.x,S.Z.y, f.Cr.x, f.Cr.y); }
+  // X = backside outside end -> stalk backside corner (short, local)
+  if(S.X){ g+=stalkLocal(S.X.x,S.X.y, f.Cl.x, f.Cl.y); }
+  // Right slot Y (when off the line): crack SS on toss crack, else stalk SS
+  if(S.Y && S.Y.online===false){
+    if(opts.crackY){ g+=P(`M ${S.Y.x} ${S.Y.y} Q ${f.SS.x-4} ${LOS-16} ${f.SS.x} ${f.SS.y+8}`,'var(--block)',"5 3"); }
+    else { g+=stalkLocal(S.Y.x,S.Y.y, f.SS.x, f.SS.y); }
+  }
+  // H = backside slot -> climb to the deep FREE SAFETY (the cutoff / home-run block)
+  if(S.H && S.H.online===false){ g+=P(`M ${S.H.x} ${S.H.y} Q ${MID-20} ${LOS-30} ${f.F.x-26} ${f.F.y+26}`,'var(--block)',"5 3"); }
+  return g;
+}
+// short local stalk: receiver steps up toward the DB and walls him; line ends a few px short with a T-cap.
+function stalkLocal(rx,ry,dx,dy){
+  const rrx=mx(rx), ddx=mx(dx);
+  const ang=Math.atan2((dy)-ry,(ddx)-rrx);
+  const len=Math.min(26, Math.hypot(ddx-rrx, dy-ry)-16);
+  const sx=rrx+Math.cos(ang)*11, sy=ry+Math.sin(ang)*11;
+  const ex=sx+Math.cos(ang)*Math.max(len,14), ey=sy+Math.sin(ang)*Math.max(len,14);
+  const tl=6,tx=Math.cos(ang+Math.PI/2)*tl,ty=Math.sin(ang+Math.PI/2)*tl;
+  return `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" stroke="var(--block)" stroke-width="2.6" stroke-linecap="round"/>
+  <line x1="${ex-tx}" y1="${ey-ty}" x2="${ex+tx}" y2="${ey+ty}" stroke="var(--block)" stroke-width="2.6" stroke-linecap="round"/>`;
+}
+
+// ===== TIERED ORGANIZATION =====
+// BASE formations = your 3 install-first looks. EXTRA = variations to add later.
+const FORMS_BASE=[['spread','Spread'],['iform','I-Form'],['trips','Trips']];
+const FORMS_EXTRA=[['pistol','Pistol'],['ace','Ace'],['splitback','Split Back'],['bunch','Bunch']];
+
+// CORE plays = the 6 install-first runs. MENU = situational / advanced, kept for access.
+const PLAYS_CORE=[
+  ['inside_zone','Inside Zone'],['outside_zone','Outside Zone'],['inside_trap','Inside Trap'],
+  ['sweep_strong','Sweep'],['toss_bob','Toss'],['fb_belly','FB Belly'],['qb_trap','QB Trap']
+];
+const PLAYS_MENU=[
+  ['toss_crack','Toss Crack'],['h_rocket','H Rocket'],
+  ['is_zone_read','Zone Read'],['z_around','Z Around'],['reverse_option','Reverse Opt']
+];
+const PLAYS_MOTION=[
+  ['jet_sweep','Jet Sweep'],['jet_zone','Jet + Zone'],['orbit_toss','Orbit Toss']
+];
+
+let state={form:'spread',play:'inside_zone',variant:'read',dir:'R',motionMan:'H'};
+
+function tabRow(list,attr,active){return list.map(p=>
+  `<button class="tab" data-${attr}="${p[0]}"${p[0]===active?' data-init="1"':''}>${p[1]}</button>`).join('');}
+
+document.getElementById('plays').innerHTML=
+   '<div class="lbl">Formation — Base (install first)</div>'
+  +'<div class="row">'+tabRow(FORMS_BASE,'form',state.form)+'</div>'
+  +'<div class="lbl dim" style="margin-top:8px;">Formation — Extra (add later)</div>'
+  +'<div class="row dim">'+tabRow(FORMS_EXTRA,'form')+'</div>'
+  +'<div class="lbl" style="margin-top:12px;">Play — Core (install first)</div>'
+  +'<div class="row">'+tabRow(PLAYS_CORE,'play',state.play)+'</div>'
+  +'<div class="lbl" style="margin-top:8px;color:#7fb0d0;">Play — Motion (jet / orbit)</div>'
+  +'<div class="row">'+tabRow(PLAYS_MOTION,'play')+'</div>'
+  +'<div class="lbl dim" style="margin-top:8px;">Play — Menu (situational / advanced)</div>'
+  +'<div class="row dim">'+tabRow(PLAYS_MENU,'play')+'</div>'
+  +'<div class="lbl" style="margin-top:12px;">Direction</div>'
+  +'<div class="row"><button class="tab dir active" data-dir="R">Run Right ▶</button><button class="tab dir" data-dir="L">◀ Run Left</button></div>'
+  +'<div id="motionPick"></div>';
+
+// mark initial active
+document.querySelectorAll('[data-form]').forEach(b=>{if(b.dataset.form===state.form)b.classList.add('active');});
+document.querySelectorAll('[data-play]').forEach(b=>{if(b.dataset.play===state.play)b.classList.add('active');});
+
+function renderVariantTabs(){
+  const p=PLAYS[state.play];
+  const vbox=document.getElementById('variants');
+  if(p.variants){
+    vbox.style.display='flex';
+    vbox.innerHTML='<div class="lbl">Version</div>'+Object.keys(p.variants).map(k=>
+      `<button class="tab var ${state.variant===k?'active':''}" data-var="${k}">${p.variants[k].label}</button>`).join('');
+    vbox.querySelectorAll('[data-var]').forEach(b=>b.onclick=()=>{state.variant=b.dataset.var;render();});
+  } else { vbox.style.display='none'; vbox.innerHTML=''; }
+}
+
+function render(){
+  FLIP = (state.dir==='L');
+  const p=PLAYS[state.play];
+  const fm=FORMS[state.form];
+  const f=front();
+  const S=fm.pos();
+  let variant=null, readKey=null, blocksFn, actionFn, rows, note;
+  if(p.variants){
+    if(!p.variants[state.variant]) state.variant=Object.keys(p.variants)[0];
+    variant=p.variants[state.variant];
+    readKey=variant.readKey; blocksFn=variant.blocks; actionFn=variant.action; rows=variant.rows; note=variant.note;
+  } else { blocksFn=p.blocks; actionFn=p.action; rows=p.rows; note=p.note; }
+
+  // who is the ballcarrier/motion skill that should NOT be drawn as a static dot at LOS?
+  // (their movement is drawn by action). We still draw them at their start, so hide nothing by default,
+  // except when a wide receiver (H/Z) is the jet/around carrier we keep them (motion line starts at them).
+  const hide=[];
+
+  const recOpts = { crackY: (state.play==='toss_crack') };
+  const inner = drawFront(f,readKey) + drawOL() + drawSkill(S,hide) + recBlocks(f,S,recOpts) + blocksFn(f) + actionFn(f,S,state.motionMan);
+
+  // legality: 5 interior OL + count of online skill players = total on LOS (must be >=7)
+  const onLineSkill = ['X','Z','H','Y'].filter(k=>S[k]&&S[k].online);
+  const onLineTotal = 5 + onLineSkill.length;
+  // eligible: the 2 end-men on the line + all off-line skill (slots/backs). With X/Z/Y as ends and
+  // slots/backs off the line, every skill player here is eligible. List them.
+  const eligible = ['X','Z','H','Y','RB'].filter(k=>S[k]);
+  const legalOK = onLineTotal>=7;
+  const legalNote = `<div style="font-family:'Roboto Mono';font-size:11px;margin-top:8px;color:${legalOK?'#5fc77f':'#e8b03d'};">`+
+    `On the line: ${onLineTotal} ${legalOK?'✓ legal':'⚠ need 7'} &nbsp;·&nbsp; Eligible receivers: ${eligible.join(', ')}`+
+    `</div>`;
+  const tag = p.hard?`<span class="tag hard">${p.tag}</span>`:`<span class="tag">${p.tag}</span>`;
+  // receiver blocking rows appended to every run play (stalk-based)
+  const isCrack = state.play==='toss_crack';
+  const recRows = [
+    ['WRs','Playside WR stalk-blocks the corner over him — mirror him, hands inside, wall him from the ball.'],
+    [isCrack?'Slot (Y)':'Slot','Backside slot sprints to cut off the deep safety (the home-run block). '+(isCrack?'Playside slot CRACKS the force man (SS) on this play.':'')],
+    ['Backside WR','Stalk the corner / cut off pursuit. Never run a route on a called run.']
+  ];
+  const rowsHtml = rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')
+    + recRows.map(r=>`<tr><td style="color:#9db5a8;">${r[0]}</td><td style="color:#b8ccc0;">${r[1]}</td></tr>`).join('');
+  const needYnote = p.needY ? `<div style="font-family:'Roboto Mono';font-size:11px;color:#9db5a8;margin-top:6px;">Note: Y aligns in the backfield as the FB/lead for this play.</div>`:'';
+  document.getElementById('card').innerHTML=`
+    <div class="ph">
+      <div class="pn">${fm.name} · ${p.name}${variant?' · '+variant.label:''}${tag}</div>
+      <div class="pdesc">${p.desc}</div>
+      ${needYnote}
+      ${legalNote}
+    </div>
+    ${svgFrame(inner)}
+    <div class="assign">
+      <h3>Assignments</h3>
+      <table><tbody>${rowsHtml}</tbody></table>
+      <div class="note">${note}</div>
+      ${p.youth?`<div class="youth">${p.youth}</div>`:''}
+    </div>`;
+  renderVariantTabs();
+  renderMotionPick();
+}
+
+function renderMotionPick(){
+  const p=PLAYS[state.play];
+  const box=document.getElementById('motionPick');
+  if(!box) return;
+  if(p && p.motion){
+    const S=FORMS[state.form].pos();
+    // candidate motion men = skill players that exist in this formation (not the RB, not QB)
+    const cands=['H','Y','Z','X'].filter(k=>S[k]);
+    if(!cands.includes(state.motionMan)) state.motionMan=cands[0];
+    box.innerHTML='<div class="lbl" style="margin-top:12px;color:#7fb0d0;">Motion man</div>'
+      +'<div class="row">'+cands.map(k=>
+        `<button class="tab mm ${k===state.motionMan?'active':''}" data-mm="${k}">${k}</button>`).join('')+'</div>';
+    box.querySelectorAll('[data-mm]').forEach(b=>b.onclick=()=>{state.motionMan=b.dataset.mm;render();});
+  } else { box.innerHTML=''; }
+}
+
+document.querySelectorAll('[data-form]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-form]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.form=b.dataset.form; render();
+});
+document.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-play]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.play=b.dataset.play; state.variant='read'; render();
+});
+document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-dir]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.dir=b.dataset.dir; render();
+});
+
+render();
+</script>
+</body>
+</html>
