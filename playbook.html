@@ -2890,11 +2890,100 @@ function allRouteTemplates(){
 // ============================================================
 // LIBRARY
 // ============================================================
-const libState = { filterType:'all', filterTag:'', search:'', view:'plays' };
+const libState = { filterType:'all', filterTag:'', search:'', view:'formations', filterFormation:'' };
 
-// The Playbook home — grid of play cards.
+// The Playbook home — formation browser, or the play grid (all / one formation).
 function renderLibrary(){
-  renderLibraryPlays();
+  if(libState.view === 'formations') renderFormationsBrowse();
+  else renderLibraryPlays();
+}
+
+// Shared header actions + backup nudge (both library views)
+function libActionsHTML(){
+  return `
+      <div class="row" style="margin:0;">
+        <button class="btn primary" id="share-playbook">Share Playbook</button>
+        <button class="btn" id="publish-plays" title="Update plays.json so every device syncs to this playbook">Publish</button>
+        <button class="btn" id="import-share">Import Code</button>
+        <button class="btn" id="export-all">Backup</button>
+        <label class="btn" style="display:inline-block;">Import JSON<input type="file" id="import-all" accept="application/json" style="display:none;"></label>
+        <button class="btn" id="print-wristband">Wristband</button>
+        <button class="btn" id="print-callsheet">Call Sheet</button>
+      </div>`;
+}
+function backupBannerHTML(){
+  return (DATA.savesSinceExport||0) >= 10 ? `
+    <div class="banner" style="margin-top:12px;">
+      💾 <b>${DATA.savesSinceExport} changes since your last backup.</b> Your playbook lives only in this browser — if its data gets cleared, everything is gone.
+      <button class="btn sm primary" id="backup-now" style="margin-left:8px;">Back up now</button>
+    </div>` : '';
+}
+function wireLibActions(printPlays){
+  document.getElementById('share-playbook').onclick = openSharePlaybookModal;
+  document.getElementById('publish-plays').onclick = publishPlaysFile;
+  const backupNow = document.getElementById('backup-now');
+  if(backupNow) backupNow.onclick = () => { exportFullJSON(); renderLibrary(); };
+  document.getElementById('import-share').onclick = () => {
+    const c = prompt('Paste a share code (a play: PB1:: — or a whole playbook: PBK1::):');
+    if(c) importShareCode(c);
+  };
+  document.getElementById('export-all').onclick = () => { exportFullJSON(); renderLibrary(); };
+  document.getElementById('import-all').onchange = e => { if(e.target.files[0]) importFullJSON(e.target.files[0]); };
+  document.getElementById('print-wristband').onclick = () => printWristband(printPlays);
+  document.getElementById('print-callsheet').onclick = () => printCallSheet(printPlays);
+}
+
+// Alignment-only mini diagram for a formation card
+function formationCardSVG(key){
+  const oldFlip = FLIP; FLIP = false;
+  const skill = getFormation(key).pos();
+  let inner = `<line x1="60" y1="${LOS}" x2="${W-60}" y2="${LOS}" stroke="var(--los)" stroke-width="3" opacity="0.85"/>`;
+  inner += drawOL();
+  inner += drawSkill(skill, [], null);
+  FLIP = oldFlip;
+  return `<svg viewBox="70 296 940 190" style="width:100%;height:auto;display:block;background:var(--field);">${inner}</svg>`;
+}
+
+// Formation browser — tap a formation, then see its runs & passes
+function renderFormationsBrowse(){
+  const root = document.getElementById('library-tab');
+  const cards = allFormations().map(([k, name]) => {
+    const runs = DATA.plays.filter(p => p.formation === k && (p.type||'run') === 'run').length;
+    const passes = DATA.plays.filter(p => p.formation === k && p.type === 'pass').length;
+    return `
+      <div class="lib-card" data-form="${escapeHtml(k)}">
+        <div class="thumb">${formationCardSVG(k)}</div>
+        <div class="body">
+          <h4>${escapeHtml(name)}</h4>
+          <div class="meta">${runs} run${runs===1?'':'s'} · ${passes} pass${passes===1?'':'es'}</div>
+        </div>
+      </div>`;
+  }).join('');
+  root.innerHTML = `
+    <div class="home-head">
+      <div>
+        <div class="home-title">My Playbook</div>
+        <div class="home-sub">Pick a formation to see its plays — or browse everything at once</div>
+      </div>
+      ${libActionsHTML()}
+    </div>
+    ${backupBannerHTML()}
+    <div class="row" style="margin-top:14px;">
+      <button class="chip active">Formations</button>
+      <button class="chip" id="lib-all-plays">All Plays (${DATA.plays.length})</button>
+    </div>
+    <div class="lib-grid">${cards}</div>
+  `;
+  wireLibActions(DATA.plays);
+  document.getElementById('lib-all-plays').onclick = () => {
+    libState.view = 'plays'; libState.filterFormation = ''; renderLibrary();
+  };
+  root.querySelectorAll('[data-form]').forEach(c => c.onclick = () => {
+    libState.view = 'plays';
+    libState.filterFormation = c.getAttribute('data-form');
+    libState.filterType = 'all';
+    renderLibrary();
+  });
 }
 
 // The Templates tab — route tree + route template cards.
@@ -2915,6 +3004,7 @@ function renderTemplates(){
 function renderLibraryPlays(){
   const root = document.getElementById('library-tab');
   const plays = DATA.plays.filter(p => {
+    if(libState.filterFormation && p.formation !== libState.filterFormation) return false;
     if(libState.filterType !== 'all' && (p.type||'run') !== libState.filterType) return false;
     if(libState.filterTag && p.tag !== libState.filterTag) return false;
     if(libState.search){
@@ -2927,31 +3017,22 @@ function renderLibraryPlays(){
   const tags = [...new Set(DATA.plays.map(p=>p.tag).filter(Boolean))].sort();
 
   const totalPlays = DATA.plays.length;
+  const formName = libState.filterFormation ? getFormation(libState.filterFormation).name : '';
   root.innerHTML = `
     <div class="home-head">
       <div>
-        <div class="home-title">My Playbook</div>
-        <div class="home-sub">${totalPlays} play${totalPlays===1?'':'s'} • tap a card to view, or start a new one</div>
+        <div class="home-title">${formName ? escapeHtml(formName) + ' Plays' : 'All Plays'}</div>
+        <div class="home-sub">${plays.length} of ${totalPlays} play${totalPlays===1?'':'s'} • tap a card to view, or start a new one</div>
       </div>
-      <div class="row" style="margin:0;">
-        <button class="btn primary" id="share-playbook">Share Playbook</button>
-        <button class="btn" id="publish-plays" title="Update plays.json so every device syncs to this playbook">Publish</button>
-        <button class="btn" id="import-share">Import Code</button>
-        <button class="btn" id="export-all">Backup</button>
-        <label class="btn" style="display:inline-block;">Import JSON<input type="file" id="import-all" accept="application/json" style="display:none;"></label>
-        <button class="btn" id="print-wristband">Wristband</button>
-        <button class="btn" id="print-callsheet">Call Sheet</button>
-      </div>
+      ${libActionsHTML()}
     </div>
-    ${(DATA.savesSinceExport||0) >= 10 ? `
-    <div class="banner" style="margin-top:12px;">
-      💾 <b>${DATA.savesSinceExport} changes since your last backup.</b> Your playbook lives only in this browser — if its data gets cleared, everything is gone.
-      <button class="btn sm primary" id="backup-now" style="margin-left:8px;">Back up now</button>
-    </div>` : ''}
-    <div class="row" style="margin-top:12px;align-items:center;">
-      <button class="btn ${libState.filterType==='all'?'active':''}" data-ft="all">All</button>
-      <button class="btn ${libState.filterType==='run'?'active':''}" data-ft="run">Runs</button>
-      <button class="btn ${libState.filterType==='pass'?'active':''}" data-ft="pass">Passes</button>
+    ${backupBannerHTML()}
+    <div class="row" style="margin-top:14px;align-items:center;">
+      <button class="chip" id="lib-back">← Formations</button>
+      <span class="ctl-sep"></span>
+      <button class="btn sm ${libState.filterType==='all'?'active':''}" data-ft="all">All</button>
+      <button class="btn sm ${libState.filterType==='run'?'active':''}" data-ft="run">Runs</button>
+      <button class="btn sm ${libState.filterType==='pass'?'active':''}" data-ft="pass">Passes</button>
       <input type="text" placeholder="Search plays…" id="search" value="${escapeHtml(libState.search)}" style="margin-left:8px;min-width:160px;">
       <select id="tag-filter">
         <option value="">All Tags</option>
@@ -2967,27 +3048,26 @@ function renderLibraryPlays(){
     </div>
   `;
 
+  document.getElementById('lib-back').onclick = () => {
+    libState.view = 'formations'; libState.filterFormation = ''; libState.search = ''; renderLibrary();
+  };
   root.querySelectorAll('[data-ft]').forEach(b => b.onclick = () => { libState.filterType = b.dataset.ft; renderLibrary(); });
-  document.getElementById('search').oninput = e => { libState.search = e.target.value; renderLibrary(); };
+  document.getElementById('search').oninput = e => {
+    libState.search = e.target.value;
+    renderLibrary();
+    const el = document.getElementById('search');
+    if(el){ el.focus(); const L = el.value.length; el.setSelectionRange(L, L); }
+  };
   document.getElementById('tag-filter').onchange = e => { libState.filterTag = e.target.value; renderLibrary(); };
 
   document.getElementById('new-play').onclick = () => {
     editorState.editingId = null;
     editorState.draft = blankPlay();
+    // Building from inside a formation view starts the draft in that formation
+    if(libState.filterFormation) editorState.draft.formation = libState.filterFormation;
     activateTab('build');
   };
-  document.getElementById('share-playbook').onclick = openSharePlaybookModal;
-  document.getElementById('publish-plays').onclick = publishPlaysFile;
-  const backupNow = document.getElementById('backup-now');
-  if(backupNow) backupNow.onclick = () => { exportFullJSON(); renderLibrary(); };
-  document.getElementById('import-share').onclick = () => {
-    const c = prompt('Paste a share code (a play: PB1:: — or a whole playbook: PBK1::):');
-    if(c) importShareCode(c);
-  };
-  document.getElementById('export-all').onclick = () => { exportFullJSON(); renderLibrary(); };
-  document.getElementById('import-all').onchange = e => { if(e.target.files[0]) importFullJSON(e.target.files[0]); };
-  document.getElementById('print-wristband').onclick = () => printWristband(plays);
-  document.getElementById('print-callsheet').onclick = () => printCallSheet(plays);
+  wireLibActions(plays);
 
   root.querySelectorAll('[data-act]').forEach(b => {
     b.onclick = e => {
