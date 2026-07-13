@@ -2262,11 +2262,16 @@ function seedIfEmpty(){
     DATA.settings.colors = defaultSettings().colors;
   }
   // Keep seed plays in sync: add new seeds, refresh seeds the user hasn't
-  // edited (never touch locked view-only imports)
-  for(const seed of SEED_PLAYS){
-    const idx = DATA.plays.findIndex(p => p.id === seed.id);
-    if(idx < 0) DATA.plays.push({...seed});
-    else if(!DATA.plays[idx].edited && !DATA.plays[idx].locked) DATA.plays[idx] = {...seed, code: DATA.plays[idx].code};
+  // edited (never touch locked view-only imports). Skipped entirely once a
+  // published plays.json governs the library, and for seeds the user deleted.
+  if(!DATA.publishedMode){
+    const deleted = new Set(DATA.deletedSeeds || []);
+    for(const seed of SEED_PLAYS){
+      if(deleted.has(seed.id)) continue;
+      const idx = DATA.plays.findIndex(p => p.id === seed.id);
+      if(idx < 0) DATA.plays.push({...seed});
+      else if(!DATA.plays[idx].edited && !DATA.plays[idx].locked) DATA.plays[idx] = {...seed, code: DATA.plays[idx].code};
+    }
   }
   ensurePlayCodes();
   saveData();
@@ -2364,6 +2369,57 @@ function playbookPayload(access){
 function encodePlaybook(access){
   try { return 'PBK1::' + btoa(unescape(encodeURIComponent(JSON.stringify(playbookPayload(access))))); }
   catch(e){ return null; }
+}
+
+// ============================================================
+// PUBLISHED PLAYBOOK — plays.json in the repo is the team's
+// source of truth. Publish downloads it; every device fetches
+// and applies it on load (when online).
+// ============================================================
+function publishPayload(){
+  const clean = p => {
+    const c = JSON.parse(JSON.stringify(p));
+    delete c.edited; delete c.pub; delete c.locked;
+    return c;
+  };
+  return {
+    v: 1,
+    access: 'edit',
+    published: Date.now(),
+    plays: DATA.plays.filter(p => !p.locked).map(clean),
+    formations: DATA.formations || [],
+    routeTemplates: DATA.routeTemplates || [],
+  };
+}
+function publishPlaysFile(){
+  downloadJSON(publishPayload(), 'plays.json');
+  alert('plays.json downloaded.\n\nPut it in your GitHub repo folder (replacing the old one) and push — or just tell Claude to publish it. Every device picks it up the next time it opens online.');
+}
+// Apply a published plays.json. Local plays you edited on THIS device always
+// win; everything else follows the published file (including removals).
+function applyPublished(payload){
+  if(!payload || !Array.isArray(payload.plays)) return false;
+  const stamp = payload.published || 0;
+  if(DATA.lastPublishedApplied && DATA.lastPublishedApplied >= stamp) return false;
+  const pubIds = new Set(payload.plays.map(p => p.id));
+  const keepLocal = DATA.plays.filter(p => (p.edited || p.locked) && !pubIds.has(p.id));
+  DATA.plays = payload.plays.map(p => {
+    const local = DATA.plays.find(x => x.id === p.id);
+    return (local && local.edited) ? local : {...p, pub:true};
+  }).concat(keepLocal);
+  for(const f of (payload.formations || [])){
+    const i = (DATA.formations || []).findIndex(x => x.id === f.id);
+    if(i >= 0) DATA.formations[i] = f; else DATA.formations.push(f);
+  }
+  for(const r of (payload.routeTemplates || [])){
+    const i = (DATA.routeTemplates || []).findIndex(x => x.id === r.id);
+    if(i >= 0) DATA.routeTemplates[i] = r; else DATA.routeTemplates.push(r);
+  }
+  DATA.lastPublishedApplied = stamp;
+  DATA.publishedMode = true;   // published file governs the library from now on
+  ensurePlayCodes();
+  saveData();
+  return true;
 }
 function importShareCode(code){
   code = (code || '').trim();
@@ -2832,6 +2888,7 @@ function renderLibraryPlays(){
       </div>
       <div class="row" style="margin:0;">
         <button class="btn primary" id="share-playbook">Share Playbook</button>
+        <button class="btn" id="publish-plays" title="Update plays.json so every device syncs to this playbook">Publish</button>
         <button class="btn" id="import-share">Import Code</button>
         <button class="btn" id="export-all">Backup</button>
         <label class="btn" style="display:inline-block;">Import JSON<input type="file" id="import-all" accept="application/json" style="display:none;"></label>
@@ -2873,6 +2930,7 @@ function renderLibraryPlays(){
     activateTab('build');
   };
   document.getElementById('share-playbook').onclick = openSharePlaybookModal;
+  document.getElementById('publish-plays').onclick = publishPlaysFile;
   const backupNow = document.getElementById('backup-now');
   if(backupNow) backupNow.onclick = () => { exportFullJSON(); renderLibrary(); };
   document.getElementById('import-share').onclick = () => {
@@ -2902,6 +2960,11 @@ function renderLibraryPlays(){
       }
       else if(act === 'del'){
         if(confirm('Delete "'+play.name+'"?')){
+          // Remember deleted seed plays so they don't come back on reload
+          if(SEED_PLAYS.some(s => s.id === id)){
+            DATA.deletedSeeds = DATA.deletedSeeds || [];
+            if(!DATA.deletedSeeds.includes(id)) DATA.deletedSeeds.push(id);
+          }
           DATA.plays = DATA.plays.filter(p=>p.id !== id);
           markDirty(); saveData(); renderLibrary();
         }
@@ -4251,6 +4314,13 @@ applyTheme();
 // Offline support when hosted (https) — caches the app after the first visit
 if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+// Published-playbook sync: when hosted and online, pull plays.json and apply it
+if(location.protocol === 'https:' || location.protocol === 'http:'){
+  fetch('plays.json', {cache:'no-store'})
+    .then(r => r.ok ? r.json() : null)
+    .then(p => { if(p && applyPublished(p)) renderCurrentTab(); })
+    .catch(()=>{});
 }
 // Shared-link import: #pb=<playbook code> or #p=<single play code>
 (function(){
