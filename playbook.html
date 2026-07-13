@@ -402,14 +402,6 @@ const FORMATIONS = {
     X:{x:FL+96,y:ONL,online:true},
     QB:{...QBu}, RB:{x:MID,y:LOS+84}
   };}},
-  // Wildcat: direct snap to RB, QB out wide as a receiver
-  wildcat:{name:'Wildcat', under:false, pos(){return{
-    X:{x:FL+96,y:ONL,online:true}, Z:{x:FR-96,y:ONL,online:true},
-    Y:{x:OL.RT+90,y:OFL,online:false},
-    QB:{x:FR-180,y:OFL,online:false},  // pulled in so it doesn't sit on top of Z
-    RB:{x:MID,y:LOS+60},                // takes the direct snap
-    H:{x:MID-58,y:LOS+60,online:false}
-  };}},
   // Heavy: 2 TEs + 2 backs (12 personnel I)
   heavy:{name:'Heavy', under:true, pos(){return{
     X:{x:OL.LT-38,y:ONL,online:true},   // TE left, on line
@@ -2532,6 +2524,7 @@ const viewerState = {
   defense: null,    // null = use play default, else override
   formation: null,  // null = use play default, else formation key override
   passGroup: 'base',// which pass-game group is open in the picker
+  runGroup: 'base', // which run-game group is open in the picker
   showDefense: true,
   animating: false,
   animSpeed: 1,
@@ -2566,25 +2559,31 @@ function renderViewer(){
     `<button class="btn sm ${p.id===viewerState.playId?'active':''}" data-pick="${p.id}">${p.locked?'🔒 ':''}${escapeHtml(label || p.name)}</button>`;
   const playList = type => playsByType[type].map(p => playBtn(p)).join('');
 
-  // Pass game grouped by formation family (concept plays are id-prefixed c_)
-  const passGroups = [];
-  {
-    const base = playsByType.pass.filter(p => !String(p.id).startsWith('c_'));
-    if(base.length) passGroups.push({ key:'base', label:'Base', plays:base });
+  // Both games grouped by formation family (generated plays are id-prefixed c_/r_)
+  const buildGroups = (list, genPrefix) => {
+    const groups = [];
+    const base = list.filter(p => !String(p.id).startsWith(genPrefix));
+    if(base.length) groups.push({ key:'base', label:'Base', plays:base });
     for(const fk of FORMATION_NAMES){
-      const list = playsByType.pass.filter(p => String(p.id).startsWith('c_') && p.formation === fk);
-      if(list.length) passGroups.push({ key:fk, label:FORMATIONS[fk].name, plays:list });
+      const sub = list.filter(p => String(p.id).startsWith(genPrefix) && p.formation === fk);
+      if(sub.length) groups.push({ key:fk, label:FORMATIONS[fk].name, plays:sub });
     }
-    const seen = new Set(passGroups.flatMap(g => g.plays.map(p => p.id)));
-    const rest = playsByType.pass.filter(p => !seen.has(p.id));
-    if(rest.length) passGroups.push({ key:'other', label:'Other', plays:rest });
-  }
-  const activeGroup = passGroups.find(g => g.key === viewerState.passGroup) || passGroups[0];
-  const passPicker = !passGroups.length ? '' : (q
-    ? `<div class="lbl">Pass game</div><div class="row">${playsByType.pass.map(p => playBtn(p)).join('')}</div>`
-    : `<div class="lbl">Pass game</div>
-       <div class="row">${passGroups.map(g => `<button class="chip ${g===activeGroup?'active':''}" data-pgroup="${g.key}">${escapeHtml(g.label)}</button>`).join('')}</div>
-       <div class="row">${activeGroup.plays.map(p => playBtn(p, activeGroup.key==='base' ? p.name : shortName(p))).join('')}</div>`);
+    const seen = new Set(groups.flatMap(g => g.plays.map(p => p.id)));
+    const rest = list.filter(p => !seen.has(p.id));
+    if(rest.length) groups.push({ key:'other', label:'Other', plays:rest });
+    return groups;
+  };
+  const gamePicker = (title, groups, stateKey, dataAttr) => {
+    if(!groups.length) return '';
+    const flat = groups.flatMap(g => g.plays);
+    if(q) return `<div class="lbl">${title}</div><div class="row">${flat.map(p => playBtn(p)).join('')}</div>`;
+    const active = groups.find(g => g.key === viewerState[stateKey]) || groups[0];
+    return `<div class="lbl">${title}</div>
+       <div class="row">${groups.map(g => `<button class="chip ${g===active?'active':''}" data-${dataAttr}="${g.key}">${escapeHtml(g.label)}</button>`).join('')}</div>
+       <div class="row">${active.plays.map(p => playBtn(p, active.key==='base' ? p.name : shortName(p))).join('')}</div>`;
+  };
+  const runPicker = gamePicker('Run game', buildGroups(playsByType.run, 'r_'), 'runGroup', 'rgroup');
+  const passPicker = gamePicker('Pass game', buildGroups(playsByType.pass, 'c_'), 'passGroup', 'pgroup');
 
   const variantTabs = (play.variants && play.variants.length) ?
     `<div class="lbl">Version</div><div class="row">`
@@ -2629,7 +2628,7 @@ function renderViewer(){
     <div class="row" style="margin-bottom:2px;">
       <input type="text" id="viewer-search" placeholder="Filter plays… (name, tag, code)" value="${escapeHtml(viewerState.search||'')}" style="min-width:230px;">
     </div>
-    ${playsByType.run.length ? `<div class="lbl">Run game</div><div class="row">${playList('run')}</div>` : ''}
+    ${runPicker}
     ${passPicker}
     ${!playsByType.run.length && !playsByType.pass.length ? '<div class="lbl">No plays match your filter.</div>' : ''}
     ${variantTabs}
@@ -2694,11 +2693,16 @@ function renderViewer(){
     const picked = DATA.plays.find(p => p.id === b.dataset.pick);
     if(picked && picked.type === 'pass'){
       viewerState.passGroup = String(picked.id).startsWith('c_') ? picked.formation : 'base';
+    } else if(picked){
+      viewerState.runGroup = String(picked.id).startsWith('r_') ? picked.formation : 'base';
     }
     renderViewer();
   });
   root.querySelectorAll('[data-pgroup]').forEach(b => b.onclick = () => {
     viewerState.passGroup = b.dataset.pgroup; renderViewer();
+  });
+  root.querySelectorAll('[data-rgroup]').forEach(b => b.onclick = () => {
+    viewerState.runGroup = b.dataset.rgroup; renderViewer();
   });
   const vsearch = document.getElementById('viewer-search');
   vsearch.oninput = () => {
