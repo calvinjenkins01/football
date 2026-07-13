@@ -113,6 +113,14 @@ h1,h2,h3,h4{font-family:'Oswald',sans-serif;}
 .btn.sm{padding:4px 9px;font-size:11px;border-radius:6px;}
 
 select,input[type=text],input[type=number],textarea{font-family:'Inter';background:var(--panel);color:var(--chalk);border:1px solid var(--border-strong);padding:6px 10px;border-radius:8px;font-size:13px;}
+
+/* Formation-group chips + compact control labels (Play tab) */
+.chip{font-family:'Oswald';font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;
+  padding:5px 13px;border-radius:20px;border:1px solid var(--border-strong);background:var(--panel);color:var(--muted);cursor:pointer;transition:all .12s;}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+.chip.active{background:var(--chalk);border-color:var(--chalk);color:var(--panel);}
+.ctl-lbl{font-family:'Roboto Mono';font-size:9.5px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
+.ctl-sep{width:1px;height:22px;background:var(--border-strong);margin:0 6px;flex-shrink:0;}
 select:focus,input:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
 textarea{width:100%;min-height:60px;resize:vertical;}
 
@@ -487,60 +495,64 @@ function resolveDefender(role, defenseKey){
 // Route shapes match the PlayMakerX route tree. inDir = toward the middle of
 // the field, outDir = toward the nearest sideline. Each returns the polyline
 // waypoints from the receiver's spot to the route's end (sharp breaks).
+// Depths are measured from the LINE OF SCRIMMAGE (true yards downfield), not
+// from the receiver's alignment — a 5-yard stick breaks 5 yards past the ball
+// whether the receiver is on the line or 3 yards off it.
 const RECEIVER_ROUTES = {
   // 9 — Go: vertical straight up the field
-  go:    (sx,sy,depth=18)=> [[sx, sy - depth*YPP]],
-  // 11 — Hitch: 5-yd stem, short hook back INWARD toward the QB
+  go:    (sx,sy,depth=18)=> [[sx, LOS - depth*YPP]],
+  // 11 — Hitch: stem, short hook back INWARD toward the QB
   hitch: (sx,sy,depth=5)=>{
-    const d = depth*YPP, inDir = (sx < MID) ? 1 : -1;
-    return [[sx, sy - d], [sx + inDir*14, sy - d + 16]];
+    const yy = LOS - depth*YPP, inDir = (sx < MID) ? 1 : -1;
+    return [[sx, yy], [sx + inDir*14, yy + 16]];
   },
   // 2 — Slant: 3-yd stem, flat angled break inside across the face
   slant: (sx,sy,depth=3)=>{
-    const d = depth*YPP, inDir = (sx < MID) ? 1 : -1;
-    return [[sx, sy - d], [sx + inDir*120, sy - d - 52]];
+    const yy = LOS - depth*YPP, inDir = (sx < MID) ? 1 : -1;
+    return [[sx, yy], [sx + inDir*120, yy - 52]];
   },
-  // 5 — Out: 8-yd stem, sharp 90° break to the sideline
+  // 5 — Out: stem, sharp 90° break to the sideline
   out:   (sx,sy,depth=8)=>{
-    const d = depth*YPP, outDir = (sx < MID) ? -1 : 1;
-    return [[sx, sy - d], [sx + outDir*70, sy - d]];
+    const yy = LOS - depth*YPP, outDir = (sx < MID) ? -1 : 1;
+    return [[sx, yy], [sx + outDir*70, yy]];
   },
-  // 6 — Dig (In): 10-yd stem, sharp 90° break across the middle
+  // 6 — Dig (In): stem, sharp 90° break across the middle
   dig:   (sx,sy,depth=10)=>{
-    const d = depth*YPP, inDir = (sx < MID) ? 1 : -1;
-    return [[sx, sy - d], [sx + inDir*95, sy - d]];
+    const yy = LOS - depth*YPP, inDir = (sx < MID) ? 1 : -1;
+    return [[sx, yy], [sx + inDir*95, yy]];
   },
-  // 7 — Post: 10-yd stem, 45° diagonal toward the goalpost (inside)
+  // 7 — Post: stem, 45° diagonal toward the goalpost (inside)
   post:  (sx,sy,depth=10)=>{
-    const d = depth*YPP, inDir = (sx < MID) ? 1 : -1;
-    return [[sx, sy - d], [sx + inDir*80, sy - d - 95]];
+    const yy = LOS - depth*YPP, inDir = (sx < MID) ? 1 : -1;
+    return [[sx, yy], [sx + inDir*80, yy - 95]];
   },
-  // 8 — Corner: 9-yd stem, 45° diagonal toward the back pylon (outside)
+  // 8 — Corner: stem, 45° diagonal toward the back pylon (outside)
   corner:(sx,sy,depth=9)=>{
-    const d = depth*YPP, outDir = (sx < MID) ? -1 : 1;
-    return [[sx, sy - d], [sx + outDir*80, sy - d - 95]];
+    const yy = LOS - depth*YPP, outDir = (sx < MID) ? -1 : 1;
+    return [[sx, yy], [sx + outDir*80, yy - 95]];
   },
   // 10 — Flat: quick release out toward the sideline at low depth
   flat:  (sx,sy,depth=2)=>{
-    const d = depth*YPP, outDir = (sx < MID) ? -1 : 1;
-    return [[sx + outDir*25, sy - d], [sx + outDir*85, sy - d - 10]];
+    const yy = LOS - depth*YPP, outDir = (sx < MID) ? -1 : 1;
+    return [[sx + outDir*25, yy], [sx + outDir*85, yy - 10]];
   },
-  // 3 — Comeback: 10-yd stem, sharp hook back DOWN & OUT to the sideline
+  // 3 — Comeback: stem, sharp hook back DOWN & OUT to the sideline
   comeback: (sx,sy,depth=10)=>{
-    const d = depth*YPP, outDir = (sx < MID) ? -1 : 1;
-    return [[sx, sy - d], [sx + outDir*20, sy - d + 22]];
+    const yy = LOS - depth*YPP, outDir = (sx < MID) ? -1 : 1;
+    return [[sx, yy], [sx + outDir*20, yy + 22]];
   },
-  // 4 — Curl: 9-yd stem, hook back DOWN & IN toward the QB
+  // 4 — Curl: stem, hook back DOWN & IN toward the QB
   curl: (sx,sy,depth=9)=>{
-    const d = depth*YPP, inDir = (sx < MID) ? 1 : -1;
-    return [[sx, sy - d], [sx + inDir*22, sy - d + 22]];
+    const yy = LOS - depth*YPP, inDir = (sx < MID) ? 1 : -1;
+    return [[sx, yy], [sx + inDir*22, yy + 22]];
   },
   // 1 — Quick Out: 3-yd stem, sharp 90° break to the sideline
   quick_out: (sx,sy,depth=3)=>{
-    const d = depth*YPP, outDir = (sx < MID) ? -1 : 1;
-    return [[sx, sy - d], [sx + outDir*70, sy - d]];
+    const yy = LOS - depth*YPP, outDir = (sx < MID) ? -1 : 1;
+    return [[sx, yy], [sx + outDir*70, yy]];
   },
   // 0 — Screen: bubble back behind the LOS, working back toward the QB
+  // (screens stay relative to the receiver — they happen behind the ball)
   screen: (sx,sy)=>{
     const inDir = (sx < MID) ? 1 : -1;
     return [[sx + inDir*22, sy + 18], [sx + inDir*78, sy + 8]];
@@ -550,10 +562,10 @@ const RECEIVER_ROUTES = {
     const inDir = (sx < MID) ? 1 : -1;
     return [[sx + inDir*16, sy + 12], [sx + inDir*46, sy + 6]];
   },
-  // Drag: low crossing route across the field (kept as an extra)
+  // Drag: low crossing route across the field
   drag: (sx,sy,depth=4)=>{
-    const d = depth*YPP, inDir = (sx < MID) ? 1 : -1;
-    return [[sx + inDir*15, sy - d], [sx + inDir*200, sy - d - 5]];
+    const yy = LOS - depth*YPP, inDir = (sx < MID) ? 1 : -1;
+    return [[sx + inDir*15, yy], [sx + inDir*200, yy - 5]];
   },
 };
 
@@ -1310,7 +1322,9 @@ function renderPlay(play, opts){
         return pathWithTip(p, a.waypoints, false, 'var(--d)', null, 2.8, 11);
       }
       case 'route': {
-        const isRB = player === 'RB';
+        // Backfield route set only when the RB is actually in the backfield —
+        // split out wide (Empty), he runs the receiver tree at true depths
+        const isRB = player === 'RB' && p.y > LOS+40 && Math.abs(p.x - MID) < 90;
         const tree = isRB ? RB_ROUTES : RECEIVER_ROUTES;
         const fn = tree[a.tree];
         let wps;
@@ -2517,6 +2531,7 @@ const viewerState = {
   direction: 'R',
   defense: null,    // null = use play default, else override
   formation: null,  // null = use play default, else formation key override
+  passGroup: 'base',// which pass-game group is open in the picker
   showDefense: true,
   animating: false,
   animSpeed: 1,
@@ -2542,9 +2557,34 @@ function renderViewer(){
   const playsByType = { run: [], pass: [] };
   DATA.plays.filter(matches).forEach(p => (playsByType[p.type||'run']||playsByType.run).push(p));
 
-  const playList = type => playsByType[type].map(p =>
-    `<button class="btn ${p.id===viewerState.playId?'active':''}" data-pick="${p.id}">${p.locked?'🔒 ':''}${escapeHtml(p.name)}</button>`
-  ).join('');
+  // Short display name inside a formation group (drop the redundant prefix)
+  const shortName = p => {
+    const fn = getFormation(p.formation).name + ' ';
+    return p.name.startsWith(fn) ? p.name.slice(fn.length) : p.name;
+  };
+  const playBtn = (p, label) =>
+    `<button class="btn sm ${p.id===viewerState.playId?'active':''}" data-pick="${p.id}">${p.locked?'🔒 ':''}${escapeHtml(label || p.name)}</button>`;
+  const playList = type => playsByType[type].map(p => playBtn(p)).join('');
+
+  // Pass game grouped by formation family (concept plays are id-prefixed c_)
+  const passGroups = [];
+  {
+    const base = playsByType.pass.filter(p => !String(p.id).startsWith('c_'));
+    if(base.length) passGroups.push({ key:'base', label:'Base', plays:base });
+    for(const fk of FORMATION_NAMES){
+      const list = playsByType.pass.filter(p => String(p.id).startsWith('c_') && p.formation === fk);
+      if(list.length) passGroups.push({ key:fk, label:FORMATIONS[fk].name, plays:list });
+    }
+    const seen = new Set(passGroups.flatMap(g => g.plays.map(p => p.id)));
+    const rest = playsByType.pass.filter(p => !seen.has(p.id));
+    if(rest.length) passGroups.push({ key:'other', label:'Other', plays:rest });
+  }
+  const activeGroup = passGroups.find(g => g.key === viewerState.passGroup) || passGroups[0];
+  const passPicker = !passGroups.length ? '' : (q
+    ? `<div class="lbl">Pass game</div><div class="row">${playsByType.pass.map(p => playBtn(p)).join('')}</div>`
+    : `<div class="lbl">Pass game</div>
+       <div class="row">${passGroups.map(g => `<button class="chip ${g===activeGroup?'active':''}" data-pgroup="${g.key}">${escapeHtml(g.label)}</button>`).join('')}</div>
+       <div class="row">${activeGroup.plays.map(p => playBtn(p, activeGroup.key==='base' ? p.name : shortName(p))).join('')}</div>`);
 
   const variantTabs = (play.variants && play.variants.length) ?
     `<div class="lbl">Version</div><div class="row">`
@@ -2589,28 +2629,27 @@ function renderViewer(){
     <div class="row" style="margin-bottom:2px;">
       <input type="text" id="viewer-search" placeholder="Filter plays… (name, tag, code)" value="${escapeHtml(viewerState.search||'')}" style="min-width:230px;">
     </div>
-    ${playsByType.run.length ? `<div class="lbl">Run plays</div><div class="row">${playList('run')}</div>` : ''}
-    ${playsByType.pass.length ? `<div class="lbl">Pass plays</div><div class="row">${playList('pass')}</div>` : ''}
+    ${playsByType.run.length ? `<div class="lbl">Run game</div><div class="row">${playList('run')}</div>` : ''}
+    ${passPicker}
     ${!playsByType.run.length && !playsByType.pass.length ? '<div class="lbl">No plays match your filter.</div>' : ''}
     ${variantTabs}
-    <div class="lbl">Formation</div>
-    <div class="row" style="align-items:center;">
+    <div class="lbl">View options</div>
+    <div class="row" style="align-items:center;gap:7px;">
+      <span class="ctl-lbl">Formation</span>
       <select id="viewer-formation">
         <option value="">Play default (${escapeHtml(getFormation(play.formation).name)})</option>
         ${allFormations().map(([k,name])=>`<option value="${k}" ${viewerState.formation===k?'selected':''}>${escapeHtml(name)}</option>`).join('')}
       </select>
-      ${formationOverridden && play.type!=='pass' ? `<span style="font-family:'Roboto Mono';font-size:10.5px;color:var(--accent);">perimeter blocking auto-adjusted to this formation</span>` : ''}
-    </div>
-    <div class="lbl">Direction</div>
-    <div class="row">
-      <button class="btn ${viewerState.direction==='R'?'active':''}" data-dir="R">Run Right ▶</button>
-      <button class="btn ${viewerState.direction==='L'?'active':''}" data-dir="L">◀ Run Left</button>
-    </div>
-    <div class="lbl">Defense</div>
-    <div class="row">
-      <button class="btn ${viewerState.showDefense && (viewerState.defense||play.defenseDefault)==='3-4'?'active':''}" data-def="3-4">3-4</button>
-      <button class="btn ${viewerState.showDefense && (viewerState.defense||play.defenseDefault)==='4-3'?'active':''}" data-def="4-3">4-3</button>
-      <button class="btn ${!viewerState.showDefense?'active':''}" data-def="none">None</button>
+      <span class="ctl-sep"></span>
+      <span class="ctl-lbl">Direction</span>
+      <button class="btn sm ${viewerState.direction==='R'?'active':''}" data-dir="R">Right ▶</button>
+      <button class="btn sm ${viewerState.direction==='L'?'active':''}" data-dir="L">◀ Left</button>
+      <span class="ctl-sep"></span>
+      <span class="ctl-lbl">Defense</span>
+      <button class="btn sm ${viewerState.showDefense && (viewerState.defense||play.defenseDefault)==='3-4'?'active':''}" data-def="3-4">3-4</button>
+      <button class="btn sm ${viewerState.showDefense && (viewerState.defense||play.defenseDefault)==='4-3'?'active':''}" data-def="4-3">4-3</button>
+      <button class="btn sm ${!viewerState.showDefense?'active':''}" data-def="none">None</button>
+      ${formationOverridden && play.type!=='pass' ? `<span style="font-family:'Roboto Mono';font-size:10px;color:var(--accent);">perimeter blocking auto-adjusted</span>` : ''}
     </div>
 
     <div class="legend">
@@ -2651,7 +2690,15 @@ function renderViewer(){
 
   // Wire up
   root.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
-    viewerState.playId = b.dataset.pick; viewerState.variantIdx = 0; viewerState.formation = null; renderViewer();
+    viewerState.playId = b.dataset.pick; viewerState.variantIdx = 0; viewerState.formation = null;
+    const picked = DATA.plays.find(p => p.id === b.dataset.pick);
+    if(picked && picked.type === 'pass'){
+      viewerState.passGroup = String(picked.id).startsWith('c_') ? picked.formation : 'base';
+    }
+    renderViewer();
+  });
+  root.querySelectorAll('[data-pgroup]').forEach(b => b.onclick = () => {
+    viewerState.passGroup = b.dataset.pgroup; renderViewer();
   });
   const vsearch = document.getElementById('viewer-search');
   vsearch.oninput = () => {
