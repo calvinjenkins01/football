@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Playbook">
+<link rel="apple-touch-icon" href="icon.png">
 <title>Playbook — Play Designer</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap');
@@ -4243,6 +4248,10 @@ function escapeHtml(s){
 // ============================================================
 seedIfEmpty();
 applyTheme();
+// Offline support when hosted (https) — caches the app after the first visit
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 // Shared-link import: #pb=<playbook code> or #p=<single play code>
 (function(){
   const h = location.hash || '';
